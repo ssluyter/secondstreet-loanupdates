@@ -140,9 +140,11 @@ function buildMilestones(vars, appStatus) {
 }
 
 async function getApplicationByToken(token) {
+  if (token === 'demo' || token === 'test') {
+    console.log('[DEV] Demo token — returning mock data');
+    return { success: true, data: MOCK_DATA };
+  }
   if (!DIGIFI_KEY || DIGIFI_KEY === 'your_digifi_api_key_here') {
-    console.log('[DEV] No Digifi API key — returning mock data');
-    if (token === 'demo' || token === 'test') return { success: true, data: MOCK_DATA };
     return { success: false, error: 'not_found' };
   }
   try {
@@ -390,7 +392,7 @@ export default function MilestoneCard({ milestone }) {
     <div className={`rounded-xl p-4 relative cursor-default min-h-[120px] flex flex-col ${cardCls[status]}`}>
       <div className={`w-[30px] h-[30px] rounded-lg flex items-center justify-center mb-2 ${iconCls[status]}`}><div className="w-4 h-4"><MilestoneIcon label={label}/></div></div>
       {status==='done'&&<div className="absolute top-2.5 right-2.5 w-[18px] h-[18px] rounded-full bg-ss-blue flex items-center justify-center"><svg viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" className="w-[10px] h-[10px]"><path d="M2.5 6l2.5 2.5 4.5-5"/></svg></div>}
-      <div className={`text-[13px] leading-snug mb-auto ${status==='pending'?'text-gray-400 font-medium':'text-navy font-semibold'}`}>{label}</div>
+      <div className={`text-[13px] leading-snug flex-1 ${status==='pending'?'text-gray-400 font-medium':'text-navy font-semibold'}`}>{label}</div>
       <div className="mt-2">
         {status==='done'&&(noDate||!date?<div className="text-[11px] font-semibold text-ss-green">Complete</div>:<div className="text-[11px] font-semibold text-ss-blue">{date}</div>)}
         {status==='active'&&<div className="text-[11px] font-semibold text-ss-blue italic flex items-center gap-1.5"><span className="inline-block w-[7px] h-[7px] rounded-full bg-ss-blue animate-pulse-dot"/>In progress</div>}
@@ -539,7 +541,7 @@ export default function NotFoundPage() {
     <div className="min-h-screen flex items-center justify-center bg-[#F5F6FA] px-6">
       <div className="text-center max-w-md">
         <img src="/assets/logo-white.jpg" alt="Second Street" className="h-8 mx-auto mb-6 invert" />
-        <h1 className="font-serif text-2xl text-navy mb-2">Second Street</h1>
+        <h1 className="font-serif text-2xl text-navy mb-2">Link not found</h1>
         <p className="text-sm text-gray-500 leading-relaxed mb-6">This page requires a valid tracking link. If you received a link from your loan officer, please try clicking it again or copying the full URL.</p>
         <p className="text-xs text-gray-400">Need help? <a href="mailto:hello@mysecondstreet.com" className="text-ss-blue">hello@mysecondstreet.com</a> &bull; <a href="tel:+19493391660" className="text-ss-blue">+1 (949) 339-1660</a></p>
       </div>
