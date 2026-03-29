@@ -295,16 +295,16 @@ export default function TrackerPage(){
       <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/[0.04]"/>
       <div className="absolute -bottom-6 right-20 w-24 h-24 rounded-full bg-white/[0.03]"/>
       <div className="max-w-3xl mx-auto px-6 py-8 relative z-10">
-        <div className="flex items-end gap-6 mb-6">
+        <div className="flex flex-col items-center sm:flex-row sm:items-end gap-2 sm:gap-6 mb-6">
           <img src="/assets/logo-white.jpg" alt="Second Street" className="h-7 rounded"/>
-          <span className="text-white/40 text-[10px] font-semibold uppercase tracking-wider mb-[1px]">Loan Status</span>
+          <span className="text-white/40 text-[10px] font-semibold uppercase tracking-wider sm:mb-[3px]">Loan Status</span>
         </div>
         <div className="flex items-center gap-5 flex-wrap">
           <ProgressRing completed={done} total={total}/>
           <div>
             <h1 className="text-xl text-white mb-1 font-bold">{data.borrower_first_name} {data.borrower_last_name}</h1>
             <p className="text-[12px] text-white/65 leading-relaxed">{data.property_address}</p>
-            {data.close_of_escrow&&<div className="mt-1.5 text-[11px] font-semibold text-white/85">Close of escrow: <span className="bg-white/15 px-2.5 py-0.5 rounded-full ml-1">{data.close_of_escrow}</span></div>}
+            {data.close_of_escrow&&<div className="mt-1.5 text-[11px] font-semibold text-white/85">Close of escrow: <span className="bg-amber-400/20 text-amber-300 px-2.5 py-0.5 rounded-full ml-1">{data.close_of_escrow}</span></div>}
           </div>
         </div>
       </div>
