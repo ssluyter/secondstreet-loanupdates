@@ -336,7 +336,7 @@ export default function StatusBar({activeLabel,ringColor}){
   const borderCls=rc==='red'?'border-l-red-500':rc==='yellow'?'border-l-amber-400':'border-l-green-500';
   const tagBg=rc==='red'?'bg-red-500/10 text-red-700':rc==='yellow'?'bg-amber-400/10 text-amber-700':'bg-green-500/10 text-green-700';
   const tagText=rc==='red'?'At risk':rc==='yellow'?'Needs attention':'On track';
-  return(<div className={`bg-white rounded-xl border border-ss-border shadow-sm border-l-[3px] ${borderCls} px-4 py-3 flex items-center justify-between gap-3 mb-5`}>
+  return(<div className={`bg-white rounded-xl border border-ss-border shadow-sm border-l-[3px] ${borderCls} px-4 py-2.5 inline-flex items-center gap-3 mb-5`}>
     <div>
       <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Current step</div>
       <div className="text-[14px] font-bold text-navy">{activeLabel||'Complete!'}</div>
