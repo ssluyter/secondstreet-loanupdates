@@ -380,26 +380,16 @@ export default function TrackerPage(){
       <div className="flex flex-col gap-3 mt-4">
         <div className="bg-white rounded-xl border border-ss-border p-4">
           <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Loan team</div>
-          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <ContactCard role="Loan officer" name={data.lo_name} email={data.lo_email} phone={data.lo_phone} photo={data.lo_photo}/>
             <ContactCard role="Operations" name={data.processor_name} email={data.processor_email} photo={data.processor_photo}/>
           </div>
         </div>
-        {(data.settlement_name||data.agent_name)&&<div className="bg-white rounded-xl border border-ss-border p-4">
-          <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Legal team</div>
-          <ContactCard role="Settlement agent" name={data.settlement_name} email={data.settlement_email}/>
-        </div>}
-        {data.agent_name&&<div className="bg-white rounded-xl border border-ss-border p-4">
-          <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Real estate team</div>
-          <ContactCard role="Agent" name={data.agent_name} email={data.agent_email}/>
+        {(data.settlement_name||data.agent_name)&&<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {data.settlement_name&&<div className="bg-white rounded-xl border border-ss-border p-4"><div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Legal team</div><ContactCard role="Settlement agent" name={data.settlement_name} email={data.settlement_email}/></div>}
+          {data.agent_name&&<div className="bg-white rounded-xl border border-ss-border p-4"><div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Real estate team</div><ContactCard role="Agent" name={data.agent_name} email={data.agent_email}/></div>}
         </div>}
       </div>
-      <div className="mt-6 text-center text-[11px] text-gray-400 leading-relaxed">
-        <p className="font-medium text-gray-500 mb-1">Second Street CR, S.R.L.</p>
-        <p>This page updates automatically as your loan progresses.</p>
-        <p className="mt-1">Questions? <a href="mailto:hello@mysecondstreet.com" className="text-ss-blue">hello@mysecondstreet.com</a> &bull; <a href="tel:+19493391660" className="text-ss-blue">+1 (949) 339-1660</a></p>
-      </div>
-    </div>
   </div>);
 }
 ENDFILE
