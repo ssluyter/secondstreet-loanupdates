@@ -304,9 +304,9 @@ import React from 'react';
 export default function ContactCard({role,name,email,phone,photo}){
   if(!name)return null;
   const initials=name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
-  return(<div className="flex items-center gap-3 min-w-0">
+  return(<div className="flex items-center gap-3 min-w-0 flex-1">
     {photo?<img src={photo} alt={name} className="w-10 h-10 rounded-full object-cover flex-shrink-0"/>:<div className="w-10 h-10 rounded-full bg-navy flex items-center justify-center text-white font-semibold text-xs flex-shrink-0">{initials}</div>}
-    <div className="min-w-0">
+    <div className="min-w-0 flex-1">
       <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{role}</div>
       <div className="text-[13px] font-semibold text-navy truncate">{name}</div>
       <div className="flex flex-wrap gap-x-3 gap-y-0">
@@ -329,12 +329,30 @@ export default function MilestoneSection({title,milestones}){
 }
 ENDFILE
 
+cat > client/src/components/StatusBar.jsx << 'ENDFILE'
+import React from 'react';
+export default function StatusBar({activeLabel,ringColor}){
+  const rc=ringColor||'green';
+  const borderCls=rc==='red'?'border-l-red-500':rc==='yellow'?'border-l-amber-400':'border-l-green-500';
+  const tagBg=rc==='red'?'bg-red-500/10 text-red-700':rc==='yellow'?'bg-amber-400/10 text-amber-700':'bg-green-500/10 text-green-700';
+  const tagText=rc==='red'?'At risk':rc==='yellow'?'Needs attention':'On track';
+  return(<div className={`bg-white rounded-xl border border-ss-border shadow-sm border-l-[3px] ${borderCls} px-4 py-3 flex items-center justify-between gap-3 mb-5`}>
+    <div>
+      <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Current step</div>
+      <div className="text-[14px] font-bold text-navy">{activeLabel||'Complete!'}</div>
+    </div>
+    <span className={`text-[9px] font-bold uppercase tracking-wide px-2.5 py-1 rounded flex-shrink-0 ${tagBg}`}>{tagText}</span>
+  </div>);
+}
+ENDFILE
+
 cat > client/src/pages/TrackerPage.jsx << 'ENDFILE'
 import React,{useEffect,useState} from 'react';
 import {useParams} from 'react-router-dom';
 import ProgressRing from '../components/ProgressRing';
 import MilestoneSection from '../components/MilestoneSection';
 import ContactCard from '../components/ContactCard';
+import StatusBar from '../components/StatusBar';
 export default function TrackerPage(){
   const{token}=useParams();
   const[data,setData]=useState(null);const[error,setError]=useState(null);const[loading,setLoading]=useState(true);
@@ -366,30 +384,27 @@ export default function TrackerPage(){
       </div>
     </div>
     <div className="max-w-3xl mx-auto px-6 -mt-5 relative z-20 pb-10">
-      <div className="flex gap-2.5 mb-5 flex-wrap">
-        <div className="flex-1 min-w-[130px] bg-white rounded-xl p-3.5 shadow-sm border border-ss-border">
-          <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Milestones</div>
-          <div className="text-lg font-bold text-navy">{done} / {total}</div>
-        </div>
-        <div className="flex-1 min-w-[130px] bg-white rounded-xl p-3.5 shadow-sm border border-ss-border">
-          <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Current step</div>
-          <div className={`text-[13px] font-bold leading-snug ${active?'text-ss-blue':'text-ss-green'}`}>{active?active.label:'Complete!'}</div>
-        </div>
-      </div>
+      <StatusBar activeLabel={active?active.label:null} ringColor={data.ring_color}/>
       {sections.map(s=><MilestoneSection key={s.title} title={s.title} milestones={s.milestones}/>)}
-      <div className="flex flex-col gap-3 mt-4">
+      <div className="flex flex-col gap-2.5 mt-4">
         <div className="bg-white rounded-xl border border-ss-border p-4">
           <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Loan team</div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <ContactCard role="Loan officer" name={data.lo_name} email={data.lo_email} phone={data.lo_phone} photo={data.lo_photo}/>
             <ContactCard role="Operations" name={data.processor_name} email={data.processor_email} photo={data.processor_photo}/>
           </div>
         </div>
-        {(data.settlement_name||data.agent_name)&&<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {(data.settlement_name||data.agent_name)&&<div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           {data.settlement_name&&<div className="bg-white rounded-xl border border-ss-border p-4"><div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Legal team</div><ContactCard role="Settlement agent" name={data.settlement_name} email={data.settlement_email}/></div>}
           {data.agent_name&&<div className="bg-white rounded-xl border border-ss-border p-4"><div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Real estate team</div><ContactCard role="Agent" name={data.agent_name} email={data.agent_email}/></div>}
         </div>}
       </div>
+      <div className="mt-6 text-center text-[11px] text-gray-400 leading-relaxed">
+        <p className="font-medium text-gray-500 mb-1">Second Street Inc. &bull; Second Street CR, S.R.L.</p>
+        <p>This page updates automatically as your loan progresses.</p>
+        <p className="mt-1">Questions? <a href="mailto:hello@mysecondstreet.com" className="text-ss-blue">hello@mysecondstreet.com</a> &bull; <a href="tel:+19493391660" className="text-ss-blue">+1 (949) 339-1660</a></p>
+      </div>
+    </div>
   </div>);
 }
 ENDFILE
