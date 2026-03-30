@@ -26,60 +26,129 @@ const VAR_MAP={
   dd_cleared:'property_due_diligence_delivered_date',close_of_escrow:'borrower_close_of_escrow_date',
   lo_name:'assigned_loan_officer',lo_email:'assigned_loan_officer_email',lo_phone:'assigned_loan_officer_phone',
   processor_name:'assigned_processor',processor_email:'assigned_processor_email',
+  settlement_name:'settlement_agent_contact',settlement_email:'settlement_agent_email',
+  agent_name:'intermediary_primary_contact_name',agent_email:'intermediary_primary_contact_email',
   tracking_token:TOKEN_VAR,
 };
 var STATUS_ORDER=['Application Started','Incomes and Employment','Financial Assets','Prequal Request','Residency','Application Submission','Pre-Approved!','Conditions Review','In Processing','In Underwriting','Additional Tasks Required','Clear to Close','Closing','Closing Docs Issued','Closing Docs Received','Funded'];
 function statusAtOrPast(cs,ts){var ci=STATUS_ORDER.indexOf(cs);var ti=STATUS_ORDER.indexOf(ts);if(ci===-1||ti===-1)return false;return ci>=ti;}
 var PHOTO_MAP={'Raj Ponniah':'/assets/raj.jpg','Alex Borges':'/assets/alex.jpg','Sanam Parwani':'/assets/sanam.jpg'};
-const MOCK_DATA={
-  borrower_first_name:'John',borrower_last_name:'Garcia',
-  property_address:'123 Playa Hermosa, Guanacaste, Costa Rica',
-  close_of_escrow:'April 15, 2026',
-  lo_name:'Raj Ponniah',lo_email:'raj@mysecondstreet.com',lo_phone:'+1 (949) 339-1660',lo_photo:'/assets/raj.jpg',
-  processor_name:'Sanam Parwani',processor_email:'sanam@mysecondstreet.com',processor_photo:'/assets/sanam.jpg',
-  milestones:[
-    {label:'Application received',date:null,noDate:true,status:'done',section:'Application'},
-    {label:'Submitted to underwriting',date:null,noDate:true,status:'done',section:'Application'},
-    {label:'Pre-approval issued',date:'Jan 15, 2026',noDate:false,status:'done',section:'Application'},
-    {label:'PSA received',date:'Jan 20, 2026',noDate:false,status:'done',section:'PSA & services ordered'},
-    {label:'Escrow opened',date:'Jan 22, 2026',noDate:false,status:'done',section:'PSA & services ordered'},
-    {label:'Appraisal ordered',date:'Jan 25, 2026',noDate:false,status:'done',section:'PSA & services ordered'},
-    {label:'Due diligence ordered',date:null,noDate:false,status:'active',section:'PSA & services ordered'},
-    {label:'Appraisal received',date:null,noDate:false,status:'pending',section:'Results & clearances'},
-    {label:'Due diligence cleared',date:null,noDate:false,status:'pending',section:'Results & clearances'},
-    {label:'Clear to close',date:null,noDate:true,status:'pending',section:'Closing'},
-    {label:'Closing documents issued',date:null,noDate:true,status:'pending',section:'Closing'},
-    {label:'Closing complete',date:null,noDate:true,status:'pending',section:'Closing'},
-  ],
-};
 function hasDate(v){return v&&typeof v==='string'&&v.trim()!=='';}
+
+function computeRingColor(vars, milestones, closeOfEscrow) {
+  var ddOrderDateStr = vars[VAR_MAP.dd_ordered] || null;
+  var ddReceivedDateStr = vars[VAR_MAP.dd_cleared] || null;
+  var closeDateStr = closeOfEscrow || null;
+  if (!closeDateStr) return 'green';
+  var today = new Date(); today.setHours(0,0,0,0);
+  var closeDate; try { closeDate = new Date(closeDateStr); closeDate.setHours(0,0,0,0); } catch(e) { return 'green'; }
+  if (isNaN(closeDate.getTime())) return 'green';
+  var daysUntilClose = Math.ceil((closeDate - today) / 86400000);
+  var criticalLabels = ['PSA received','Escrow opened','Appraisal ordered','Due diligence ordered','Appraisal received','Due diligence cleared'];
+  var criticalDone = milestones.filter(function(m) { return criticalLabels.indexOf(m.label) !== -1 && m.status === 'done'; }).length;
+  var criticalRemaining = 6 - criticalDone;
+  var ddReceived = hasDate(ddReceivedDateStr);
+  if (!ddReceived) {
+    if (!hasDate(ddOrderDateStr)) return 'red';
+    var ddOrderDate; try { ddOrderDate = new Date(ddOrderDateStr); ddOrderDate.setHours(0,0,0,0); } catch(e) { return 'red'; }
+    if (isNaN(ddOrderDate.getTime())) return 'red';
+    var ddExpected = new Date(ddOrderDate.getTime() + 21 * 86400000);
+    var ddExpectedPlusBuffer = new Date(ddExpected.getTime() + 3 * 86400000);
+    if (ddExpectedPlusBuffer > closeDate) return 'red';
+    if (ddExpected <= today) return 'yellow';
+  }
+  if (criticalRemaining === 0) return 'green';
+  if (daysUntilClose < 3) { return criticalRemaining > 0 ? 'red' : 'green'; }
+  if (daysUntilClose >= 3 && daysUntilClose < 10) {
+    if (criticalRemaining >= 2) return 'red';
+    if (criticalRemaining === 1) return 'yellow';
+    return 'green';
+  }
+  if (daysUntilClose >= 10 && daysUntilClose < 20) {
+    if (criticalRemaining >= 4) return 'red';
+    if (criticalRemaining === 3) return 'yellow';
+    return 'green';
+  }
+  if (daysUntilClose >= 20 && daysUntilClose < 28) {
+    if (criticalRemaining >= 5) return 'red';
+    if (criticalRemaining === 4) return 'yellow';
+    return 'green';
+  }
+  if (daysUntilClose >= 28 && daysUntilClose <= 42) {
+    if (criticalRemaining >= 5) return 'yellow';
+    return 'green';
+  }
+  return 'green';
+}
+
 function buildMilestones(vars,appStatus){
   var raw=[
-    {label:'Application received',dateKey:null,noDate:true,section:'Application',statusTrigger:null},
-    {label:'Submitted to underwriting',dateKey:null,noDate:true,section:'Application',statusTrigger:null},
-    {label:'Pre-approval issued',dateKey:'pal_delivery_date',noDate:false,section:'Application',statusTrigger:null},
-    {label:'PSA received',dateKey:'psa_received',noDate:false,section:'PSA & services ordered',statusTrigger:null},
-    {label:'Escrow opened',dateKey:'escrow_opened',noDate:false,section:'PSA & services ordered',statusTrigger:null},
-    {label:'Appraisal ordered',dateKey:'appraisal_ordered',noDate:false,section:'PSA & services ordered',statusTrigger:null},
-    {label:'Due diligence ordered',dateKey:'dd_ordered',noDate:false,section:'PSA & services ordered',statusTrigger:null},
-    {label:'Appraisal received',dateKey:'appraisal_received',noDate:false,section:'Results & clearances',statusTrigger:null},
-    {label:'Due diligence cleared',dateKey:'dd_cleared',noDate:false,section:'Results & clearances',statusTrigger:null},
-    {label:'Clear to close',dateKey:null,noDate:true,section:'Closing',statusTrigger:'Clear to Close'},
-    {label:'Closing documents issued',dateKey:null,noDate:true,section:'Closing',statusTrigger:'Closing Docs Issued'},
-    {label:'Closing complete',dateKey:null,noDate:true,section:'Closing',statusTrigger:'Funded'},
+    {label:'Application received',dateKey:null,noDate:true,section:'Application',statusTrigger:null,countInRing:true},
+    {label:'Submitted to underwriting',dateKey:null,noDate:true,section:'Application',statusTrigger:null,countInRing:true},
+    {label:'Pre-approval issued',dateKey:'pal_delivery_date',noDate:false,section:'Application',statusTrigger:null,countInRing:true},
+    {label:'PSA received',dateKey:'psa_received',noDate:false,section:'PSA & services ordered',statusTrigger:null,countInRing:true},
+    {label:'Escrow opened',dateKey:'escrow_opened',noDate:false,section:'PSA & services ordered',statusTrigger:null,countInRing:true},
+    {label:'Appraisal ordered',dateKey:'appraisal_ordered',noDate:false,section:'PSA & services ordered',statusTrigger:null,countInRing:true},
+    {label:'Due diligence ordered',dateKey:'dd_ordered',noDate:false,section:'PSA & services ordered',statusTrigger:null,countInRing:true},
+    {label:'Awaiting clearances',dateKey:null,noDate:true,section:'Awaiting clearances',statusTrigger:null,countInRing:false},
+    {label:'Appraisal received',dateKey:'appraisal_received',noDate:false,section:'Results & clearances',statusTrigger:null,countInRing:true},
+    {label:'Due diligence cleared',dateKey:'dd_cleared',noDate:false,section:'Results & clearances',statusTrigger:null,countInRing:true},
+    {label:'Clear to close',dateKey:null,noDate:true,section:'Closing',statusTrigger:'Clear to Close',countInRing:true},
+    {label:'Closing documents issued',dateKey:null,noDate:true,section:'Closing',statusTrigger:'Closing Docs Issued',countInRing:true},
+    {label:'Closing complete',dateKey:null,noDate:true,section:'Closing',statusTrigger:'Funded',countInRing:true},
   ];
   var anyDateStepHasDate=raw.slice(2).some(function(m){if(m.noDate||!m.dateKey)return false;return hasDate(vars[VAR_MAP[m.dateKey]]);});
+  var serviceLabels=['PSA received','Escrow opened','Appraisal ordered','Due diligence ordered'];
+  var resultLabels=['Appraisal received','Due diligence cleared'];
   var firstPending=-1;
-  return raw.map(function(m,i){
+  var result=raw.map(function(m,i){
     var date=null;var status;
     if(m.dateKey&&VAR_MAP[m.dateKey])date=vars[VAR_MAP[m.dateKey]]||null;
+    if(m.label==='Awaiting clearances'){status='pending';return{label:m.label,date:null,noDate:true,status:status,section:m.section,countInRing:false};}
     if(i===0){status='done';}
     else if(i===1){status=anyDateStepHasDate?'done':(firstPending===-1?'active':'pending');if(status!=='done'&&firstPending===-1)firstPending=i;}
     else if(m.statusTrigger){if(statusAtOrPast(appStatus,m.statusTrigger)){status='done';}else{status=firstPending===-1?'active':'pending';if(firstPending===-1)firstPending=i;}}
     else{if(hasDate(date)){status='done';}else{status=firstPending===-1?'active':'pending';if(firstPending===-1)firstPending=i;}}
-    return{label:m.label,date:hasDate(date)?date:null,noDate:m.noDate,status:status,section:m.section};
+    return{label:m.label,date:hasDate(date)?date:null,noDate:m.noDate,status:status,section:m.section,countInRing:m.countInRing};
   });
+  var allServicesDone=serviceLabels.every(function(l){var m=result.find(function(x){return x.label===l;});return m&&m.status==='done';});
+  var anyResultPending=resultLabels.some(function(l){var m=result.find(function(x){return x.label===l;});return m&&m.status!=='done';});
+  var awIdx=result.findIndex(function(x){return x.label==='Awaiting clearances';});
+  if(awIdx!==-1){
+    if(allServicesDone&&anyResultPending){
+      var hasActiveElsewhere=result.some(function(x,xi){return xi!==awIdx&&x.status==='active';});
+      result[awIdx].status=hasActiveElsewhere?'pending':'active';
+    }else if(allServicesDone&&!anyResultPending){result[awIdx].status='done';}
+    else{result[awIdx].status='pending';}
+  }
+  return result;
 }
+
+const MOCK_DATA={
+  borrower_first_name:'John',borrower_last_name:'Garcia',
+  property_address:'123 Playa Hermosa, Guanacaste, Costa Rica',
+  close_of_escrow:'April 15, 2026',ring_color:'green',
+  lo_name:'Raj Ponniah',lo_email:'raj@mysecondstreet.com',lo_phone:'+1 (949) 339-1660',lo_photo:'/assets/raj.jpg',
+  processor_name:'Sanam Parwani',processor_email:'sanam@mysecondstreet.com',processor_photo:'/assets/sanam.jpg',
+  settlement_name:'Jane Martinez',settlement_email:'jane@lawfirm.com',
+  agent_name:'Maria Rodriguez',agent_email:'maria@realty.com',
+  milestones:[
+    {label:'Application received',date:null,noDate:true,status:'done',section:'Application',countInRing:true},
+    {label:'Submitted to underwriting',date:null,noDate:true,status:'done',section:'Application',countInRing:true},
+    {label:'Pre-approval issued',date:'Jan 15, 2026',noDate:false,status:'done',section:'Application',countInRing:true},
+    {label:'PSA received',date:'Jan 20, 2026',noDate:false,status:'done',section:'PSA & services ordered',countInRing:true},
+    {label:'Escrow opened',date:'Jan 22, 2026',noDate:false,status:'done',section:'PSA & services ordered',countInRing:true},
+    {label:'Appraisal ordered',date:'Jan 25, 2026',noDate:false,status:'done',section:'PSA & services ordered',countInRing:true},
+    {label:'Due diligence ordered',date:'Jan 28, 2026',noDate:false,status:'done',section:'PSA & services ordered',countInRing:true},
+    {label:'Awaiting clearances',date:null,noDate:true,status:'active',section:'Awaiting clearances',countInRing:false},
+    {label:'Appraisal received',date:null,noDate:false,status:'pending',section:'Results & clearances',countInRing:true},
+    {label:'Due diligence cleared',date:null,noDate:false,status:'pending',section:'Results & clearances',countInRing:true},
+    {label:'Clear to close',date:null,noDate:true,status:'pending',section:'Closing',countInRing:true},
+    {label:'Closing documents issued',date:null,noDate:true,status:'pending',section:'Closing',countInRing:true},
+    {label:'Closing complete',date:null,noDate:true,status:'pending',section:'Closing',countInRing:true},
+  ],
+};
+
 async function getApplicationByToken(token){
   if(token==='demo'||token==='test'){console.log('[DEV] Demo token');return{success:true,data:MOCK_DATA};}
   if(!DIGIFI_KEY||DIGIFI_KEY==='your_digifi_api_key_here'){return{success:false,error:'not_found'};}
@@ -93,15 +162,20 @@ async function getApplicationByToken(token){
     var app=Array.isArray(applications)?applications[0]:applications;
     var vars=app.variables||{};var appStatus=app.statusName||app.status||'';
     var milestones=buildMilestones(vars,appStatus);
-    var completedCount=milestones.filter(function(m){return m.status==='done';}).length;
-    var loName=vars[VAR_MAP.lo_name]||'';
-    var procName=vars[VAR_MAP.processor_name]||'';
+    var ringMilestones=milestones.filter(function(m){return m.countInRing;});
+    var completedCount=ringMilestones.filter(function(m){return m.status==='done';}).length;
+    var totalRing=ringMilestones.length;
+    var closeOfEscrow=vars[VAR_MAP.close_of_escrow]||null;
+    var ringColor=computeRingColor(vars,milestones,closeOfEscrow);
+    var loName=vars[VAR_MAP.lo_name]||'';var procName=vars[VAR_MAP.processor_name]||'';
     return{success:true,data:{
       borrower_first_name:vars[VAR_MAP.borrower_first_name]||'',borrower_last_name:vars[VAR_MAP.borrower_last_name]||'',
-      property_address:vars[VAR_MAP.property_address]||'',close_of_escrow:vars[VAR_MAP.close_of_escrow]||null,
+      property_address:vars[VAR_MAP.property_address]||'',close_of_escrow:closeOfEscrow,ring_color:ringColor,
       lo_name:loName,lo_email:vars[VAR_MAP.lo_email]||'',lo_phone:vars[VAR_MAP.lo_phone]||'',lo_photo:PHOTO_MAP[loName]||null,
       processor_name:procName,processor_email:vars[VAR_MAP.processor_email]||'',processor_photo:PHOTO_MAP[procName]||null,
-      milestones:milestones,completed_count:completedCount,total_steps:12,
+      settlement_name:vars[VAR_MAP.settlement_name]||'',settlement_email:vars[VAR_MAP.settlement_email]||'',
+      agent_name:vars[VAR_MAP.agent_name]||'',agent_email:vars[VAR_MAP.agent_email]||'',
+      milestones:milestones,completed_count:completedCount,total_steps:totalRing,
     }};
   }catch(err){console.error('Digifi API fetch error:',err.message);return{success:false,error:'api_error'};}
 }
@@ -133,8 +207,7 @@ cat > client/package.json << 'ENDFILE'
 ENDFILE
 
 cat > client/vite.config.js << 'ENDFILE'
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite';import react from '@vitejs/plugin-react';
 export default defineConfig({plugins:[react()],server:{port:5173,proxy:{'/api':'http://localhost:3001'}}});
 ENDFILE
 
@@ -153,23 +226,11 @@ export default {plugins:{tailwindcss:{},autoprefixer:{}}};
 ENDFILE
 
 cat > client/index.html << 'ENDFILE'
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Loan Status — Second Street</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
-</head>
-<body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body>
-</html>
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Loan Status — Second Street</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet"></head><body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>
 ENDFILE
 
 cat > client/src/index.css << 'ENDFILE'
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@tailwind base;@tailwind components;@tailwind utilities;
 body{font-family:'Montserrat',sans-serif;background:#F5F6FA;min-height:100vh}
 @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.75)}}
 @keyframes fade-in-up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
@@ -178,27 +239,21 @@ body{font-family:'Montserrat',sans-serif;background:#F5F6FA;min-height:100vh}
 ENDFILE
 
 cat > client/src/main.jsx << 'ENDFILE'
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import {BrowserRouter,Routes,Route} from 'react-router-dom';
-import './index.css';
-import TrackerPage from './pages/TrackerPage';
-import NotFoundPage from './pages/NotFoundPage';
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode><BrowserRouter><Routes>
-    <Route path="/track/:token" element={<TrackerPage/>}/>
-    <Route path="*" element={<NotFoundPage/>}/>
-  </Routes></BrowserRouter></React.StrictMode>
-);
+import React from 'react';import ReactDOM from 'react-dom/client';
+import {BrowserRouter,Routes,Route} from 'react-router-dom';import './index.css';
+import TrackerPage from './pages/TrackerPage';import NotFoundPage from './pages/NotFoundPage';
+ReactDOM.createRoot(document.getElementById('root')).render(<React.StrictMode><BrowserRouter><Routes><Route path="/track/:token" element={<TrackerPage/>}/><Route path="*" element={<NotFoundPage/>}/></Routes></BrowserRouter></React.StrictMode>);
 ENDFILE
 
 cat > client/src/components/ProgressRing.jsx << 'ENDFILE'
 import React,{useEffect,useState} from 'react';
-export default function ProgressRing({completed,total}){
+const RING_COLORS={green:'#22c55e',yellow:'#eab308',red:'#ef4444'};
+export default function ProgressRing({completed,total,color}){
   const[offset,setOffset]=useState(194.8);const pct=Math.round((completed/total)*100);const c=194.8;
+  const strokeColor=RING_COLORS[color]||RING_COLORS.green;
   useEffect(()=>{const t=setTimeout(()=>setOffset(c-(c*pct/100)),300);return()=>clearTimeout(t)},[pct]);
   return(<div className="relative w-[80px] h-[80px] flex-shrink-0">
-    <svg viewBox="0 0 76 76" className="-rotate-90"><circle cx="38" cy="38" r="31" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="5"/><circle cx="38" cy="38" r="31" fill="none" stroke="#fff" strokeWidth="5" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset} style={{transition:'stroke-dashoffset 1.2s ease'}}/></svg>
+    <svg viewBox="0 0 76 76" className="-rotate-90"><circle cx="38" cy="38" r="31" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="5"/><circle cx="38" cy="38" r="31" fill="none" stroke={strokeColor} strokeWidth="5" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset} style={{transition:'stroke-dashoffset 1.2s ease'}}/></svg>
     <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-[20px] font-bold text-white leading-none">{pct}%</span><span className="text-[8px] text-white/55 uppercase tracking-wider mt-0.5">Complete</span></div>
   </div>);
 }
@@ -214,6 +269,7 @@ const icons={
   'Escrow opened':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="4"/><path d="M11 11l6 6M14 14l2-2M16 16l1-1"/></svg>,
   'Appraisal ordered':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 10l7-7 7 7"/><path d="M5 9v7h4v-4h2v4h4V9"/><circle cx="15" cy="15" r="2.5"/><path d="M17 17l2 2"/></svg>,
   'Due diligence ordered':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="2" width="11" height="14" rx="1.5"/><path d="M7 6h4M7 9h2"/><circle cx="14" cy="14" r="3"/><path d="M16.5 16.5L18 18"/></svg>,
+  'Awaiting clearances':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7"/><path d="M10 6v4h3"/></svg>,
   'Appraisal received':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="3" width="12" height="14" rx="2"/><path d="M8 2v2h4V2"/><path d="M7 10l2 2 4-4"/></svg>,
   'Due diligence cleared':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="12" height="16" rx="1.5"/><path d="M7 10l2 2 4-4"/></svg>,
   'Clear to close':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7"/><path d="M7 10l2 2.5 4-5"/></svg>,
@@ -228,7 +284,7 @@ import React from 'react';
 import MilestoneIcon from './MilestoneIcons';
 export default function MilestoneCard({milestone}){
   const{label,date,noDate,status}=milestone;
-  const cardCls={done:'bg-white border-[1.5px] border-ss-green/30 shadow-sm hover:border-ss-green/50 hover:shadow-md hover:-translate-y-0.5 transition-all',active:'bg-white border-2 border-ss-blue shadow-[0_0_0_4px_rgba(31,88,251,0.1),0_2px_12px_rgba(22,30,91,0.06)]',pending:'bg-white border-[1.5px] border-ss-border/80 opacity-70'};
+  const cardCls={done:'bg-white border-[1.5px] border-ss-green/30 shadow-sm hover:border-ss-green/50 hover:shadow-md hover:-translate-y-0.5 transition-all',active:'bg-white border-2 border-ss-blue shadow-[0_0_0_4px_rgba(31,88,251,0.1),0_2px_12px_rgba(22,30,91,0.06)]',pending:'bg-white border-[1.5px] border-ss-border opacity-70'};
   const iconCls={done:'bg-ss-green/10 text-ss-green',active:'bg-ss-blue/[0.12] text-ss-blue',pending:'bg-gray-100 text-gray-300'};
   return(<div className={`rounded-xl p-4 relative cursor-default min-h-[120px] flex flex-col ${cardCls[status]}`}>
     <div className={`w-[30px] h-[30px] rounded-lg flex items-center justify-center mb-2 ${iconCls[status]}`}><div className="w-4 h-4"><MilestoneIcon label={label}/></div></div>
@@ -248,13 +304,13 @@ import React from 'react';
 export default function ContactCard({role,name,email,phone,photo}){
   if(!name)return null;
   const initials=name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
-  return(<div className="flex items-center gap-3">
-    {photo?<img src={photo} alt={name} className="w-11 h-11 rounded-full object-cover flex-shrink-0"/>:<div className="w-11 h-11 rounded-full bg-navy flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">{initials}</div>}
+  return(<div className="flex items-center gap-3 min-w-0">
+    {photo?<img src={photo} alt={name} className="w-10 h-10 rounded-full object-cover flex-shrink-0"/>:<div className="w-10 h-10 rounded-full bg-navy flex items-center justify-center text-white font-semibold text-xs flex-shrink-0">{initials}</div>}
     <div className="min-w-0">
-      <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">{role}</div>
-      <div className="text-[14px] font-semibold text-navy">{name}</div>
-      <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
-        {email&&<a href={'mailto:'+email} className="text-[11px] text-ss-blue hover:text-ss-blue-hover">{email}</a>}
+      <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{role}</div>
+      <div className="text-[13px] font-semibold text-navy truncate">{name}</div>
+      <div className="flex flex-wrap gap-x-3 gap-y-0">
+        {email&&<a href={'mailto:'+email} className="text-[11px] text-ss-blue hover:text-ss-blue-hover truncate">{email}</a>}
         {phone&&<a href={'tel:'+phone} className="text-[11px] text-ss-blue hover:text-ss-blue-hover">{phone}</a>}
       </div>
     </div>
@@ -285,9 +341,9 @@ export default function TrackerPage(){
   useEffect(()=>{(async()=>{try{const res=await fetch('/api/track/'+token);if(!res.ok){const e=await res.json();setError(e.error||'Unable to load.');return;}setData(await res.json());}catch(e){setError('Unable to connect.');}finally{setLoading(false);}})();},[token]);
   if(loading)return(<div className="min-h-screen flex items-center justify-center bg-[#F5F6FA]"><div className="text-center"><div className="w-10 h-10 border-[3px] border-ss-blue/20 border-t-ss-blue rounded-full animate-spin mx-auto mb-4"/><p className="text-sm text-gray-400 font-medium">Loading loan status...</p></div></div>);
   if(error)return(<div className="min-h-screen flex items-center justify-center bg-[#F5F6FA] px-6"><div className="text-center max-w-md"><img src="/assets/logo-white.jpg" alt="Second Street" className="h-8 mx-auto mb-6 rounded"/><h1 className="text-2xl text-navy mb-2 font-bold">Link not found</h1><p className="text-sm text-gray-500 leading-relaxed mb-6">{error}</p><p className="text-xs text-gray-400">Need help? <a href="mailto:hello@mysecondstreet.com" className="text-ss-blue">hello@mysecondstreet.com</a> &bull; <a href="tel:+19493391660" className="text-ss-blue">+1 (949) 339-1660</a></p></div></div>);
-  const done=data.milestones.filter(m=>m.status==='done').length;
+  const done=data.milestones.filter(m=>m.countInRing&&m.status==='done').length;
   const active=data.milestones.find(m=>m.status==='active');
-  const total=data.milestones.length;
+  const total=data.milestones.filter(m=>m.countInRing).length;
   const sections=[];var cs=null;
   data.milestones.forEach(function(m){if(m.section!==cs){cs=m.section;sections.push({title:cs,milestones:[]});}sections[sections.length-1].milestones.push(m);});
   return(<div className="min-h-screen bg-[#F5F6FA]">
@@ -300,7 +356,7 @@ export default function TrackerPage(){
           <span className="text-white/40 text-[10px] font-semibold uppercase tracking-wider sm:mb-[3px]">Loan Status</span>
         </div>
         <div className="flex items-center gap-5 flex-wrap">
-          <ProgressRing completed={done} total={total}/>
+          <ProgressRing completed={done} total={total} color={data.ring_color||'green'}/>
           <div>
             <h1 className="text-xl text-white mb-1 font-bold">{data.borrower_first_name} {data.borrower_last_name}</h1>
             <p className="text-[12px] text-white/65 leading-relaxed">{data.property_address}</p>
@@ -321,12 +377,22 @@ export default function TrackerPage(){
         </div>
       </div>
       {sections.map(s=><MilestoneSection key={s.title} title={s.title} milestones={s.milestones}/>)}
-      <div className="bg-white rounded-xl border border-ss-border p-5 mt-4">
-        <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-4">Your team</div>
-        <div className="flex flex-col gap-4 sm:flex-row sm:gap-8">
-          <ContactCard role="Loan officer" name={data.lo_name} email={data.lo_email} phone={data.lo_phone} photo={data.lo_photo}/>
-          <ContactCard role="Operations" name={data.processor_name} email={data.processor_email} photo={data.processor_photo}/>
+      <div className="flex flex-col gap-3 mt-4">
+        <div className="bg-white rounded-xl border border-ss-border p-4">
+          <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Loan team</div>
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+            <ContactCard role="Loan officer" name={data.lo_name} email={data.lo_email} phone={data.lo_phone} photo={data.lo_photo}/>
+            <ContactCard role="Operations" name={data.processor_name} email={data.processor_email} photo={data.processor_photo}/>
+          </div>
         </div>
+        {(data.settlement_name||data.agent_name)&&<div className="bg-white rounded-xl border border-ss-border p-4">
+          <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Legal team</div>
+          <ContactCard role="Settlement agent" name={data.settlement_name} email={data.settlement_email}/>
+        </div>}
+        {data.agent_name&&<div className="bg-white rounded-xl border border-ss-border p-4">
+          <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Real estate team</div>
+          <ContactCard role="Agent" name={data.agent_name} email={data.agent_email}/>
+        </div>}
       </div>
       <div className="mt-6 text-center text-[11px] text-gray-400 leading-relaxed">
         <p className="font-medium text-gray-500 mb-1">Second Street CR, S.R.L.</p>
