@@ -400,7 +400,7 @@ export default function TrackerPage(){
         </div>}
       </div>
       <div className="mt-6 text-center text-[11px] text-gray-400 leading-relaxed">
-        <p className="font-medium text-gray-500 mb-1">Second Street Inc. &bull; Second Street CR, S.R.L.</p>
+        <p className="font-medium text-gray-500 mb-1">Second Street CR, S.R.L.</p>
         <p>This page updates automatically as your loan progresses.</p>
         <p className="mt-1">Questions? <a href="mailto:hello@mysecondstreet.com" className="text-ss-blue">hello@mysecondstreet.com</a> &bull; <a href="tel:+19493391660" className="text-ss-blue">+1 (949) 339-1660</a></p>
       </div>
