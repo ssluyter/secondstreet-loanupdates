@@ -159,8 +159,9 @@ async function getApplicationByToken(token){
     var app=await response.json();
     if(!app||!app.variables){return{success:false,error:'not_found'};}
     var vars=app.variables||{};
-    var appLastName=(vars[VAR_MAP.borrower_last_name]||'').toLowerCase();
-    if(appLastName!==lastName){return{success:false,error:'not_found'};}
+    var appLastName=(vars[VAR_MAP.borrower_last_name]||'').toLowerCase().replace(/[^a-z]/g,'');
+    var normalizedLastName=lastName.replace(/[^a-z]/g,'');
+    if(appLastName!==normalizedLastName){return{success:false,error:'not_found'};}
     var appStatus=(app.status&&typeof app.status==='object'?app.status.name:app.statusName||app.status)||'';
     var appCreatedAt=app.createdAt?formatDate(app.createdAt):null;
     var milestones=buildMilestones(vars,appStatus,appCreatedAt);
@@ -380,7 +381,7 @@ export default function TrackerPage(){
         </div>
       </div>
     </div>
-    <div className="max-w-3xl mx-auto px-6 -mt-2 relative z-20 pb-10 pt-6">
+    <div className="max-w-3xl mx-auto px-6 -mt-2 relative z-20 pb-10 pt-4">
       {sections.map(s=><MilestoneSection key={s.title} title={s.title} milestones={s.milestones}/>)}
       <div className="flex flex-col gap-2.5 mt-4">
         <div className="bg-white rounded-xl border border-ss-border p-4">
