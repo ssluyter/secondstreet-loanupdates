@@ -44,7 +44,7 @@ function computeRingColor(vars, milestones, closeOfEscrow) {
   var closeDate; try { closeDate = new Date(closeDateStr); closeDate.setHours(0,0,0,0); } catch(e) { return 'green'; }
   if (isNaN(closeDate.getTime())) return 'green';
   var daysUntilClose = Math.ceil((closeDate - today) / 86400000);
-  (app.status&&typeof app.status==='object'?app.status.name:app.statusName||app.status)||''
+  if(daysUntilClose<0)return 'red';
   var criticalLabels = ['PSA received','Escrow opened','Appraisal ordered','Due diligence ordered','Appraisal received','Due diligence cleared'];
   var criticalDone = milestones.filter(function(m) { return criticalLabels.indexOf(m.label) !== -1 && m.status === 'done'; }).length;
   var criticalRemaining = 6 - criticalDone;
@@ -153,20 +153,21 @@ const MOCK_DATA={
 async function getApplicationByToken(token){
   if(token==='demo'||token==='test'){console.log('[DEV] Demo token');return{success:true,data:MOCK_DATA};}
   if(!DIGIFI_KEY||DIGIFI_KEY==='your_digifi_api_key_here'){return{success:false,error:'not_found'};}
+  var lastDash=token.lastIndexOf('-');
+  if(lastDash===-1){return{success:false,error:'not_found'};}
+  var lastName=token.substring(0,lastDash).toLowerCase();
+  var loanNumber=token.substring(lastDash+1);
+  if(!loanNumber||!lastName){return{success:false,error:'not_found'};}
   try{
-    var lastDash=token.lastIndexOf('-');if(lastDash===-1){return{success:false,error:'not_found'};}
-    var lastName=token.substring(0,lastDash).toLowerCase();var loanNumber=token.substring(lastDash+1);
-    if(!loanNumber||!lastName){return{success:false,error:'not_found'};}
     var searchUrl=DIGIFI_BASE+'/applications/'+encodeURIComponent(loanNumber)+'?identifierType=displayId';
-    var response=await fetch(searchUrl,{headers:{'api-key': DIGIFI_KEY,'Content-Type':'application/json'}});
-    if(!response.ok){console.error('Digifi API error: '+response.status);var errBody=await response.text();console.error(errBody);return{success:false,error:'api_error'};}
-    var result=await response.json();
-    var applications=result.items||result.data||result.applications||result;
-    if(!applications||(Array.isArray(applications)&&applications.length===0))return{success:false,error:'not_found'};
-    var app=Array.isArray(applications)?applications[0]:applications;
-    console.log('[DEBUG] app status:', app.statusName, app.status, app.applicationStatus, JSON.stringify(Object.keys(app)).substring(0,300));
-    var vars=app.variables||{};var appStatus=(app.status&&typeof app.status==='object'?app.status.name:app.statusName||app.status)||'';
-    var appLastName=(vars[VAR_MAP.borrower_last_name]||'').toLowerCase();if(appLastName!==lastName){return{success:false,error:'not_found'};}
+    var response=await fetch(searchUrl,{headers:{'api-key':DIGIFI_KEY,'Content-Type':'application/json'}});
+    if(!response.ok){console.error('Digifi API error: '+response.status);var errBody=await response.text();console.error(errBody);return{success:false,error:response.status===404?'not_found':'api_error'};}
+    var app=await response.json();
+    if(!app||!app.variables){return{success:false,error:'not_found'};}
+    var vars=app.variables||{};
+    var appLastName=(vars[VAR_MAP.borrower_last_name]||'').toLowerCase();
+    if(appLastName!==lastName){return{success:false,error:'not_found'};}
+    var appStatus=(app.status&&typeof app.status==='object'?app.status.name:app.statusName||app.status)||'';
     var milestones=buildMilestones(vars,appStatus);
     var ringMilestones=milestones.filter(function(m){return m.countInRing;});
     var completedCount=ringMilestones.filter(function(m){return m.status==='done';}).length;
@@ -342,7 +343,7 @@ export default function StatusBar({activeLabel,ringColor}){
   const borderCls=rc==='red'?'border-l-red-500':rc==='yellow'?'border-l-amber-400':'border-l-green-500';
   const tagBg=rc==='red'?'bg-red-500/10 text-red-700':rc==='yellow'?'bg-amber-400/10 text-amber-700':'bg-green-500/10 text-green-700';
   const tagText=rc==='red'?'At risk':rc==='yellow'?'Needs attention':'On track';
-  return(<div className={`bg-white rounded-xl border border-ss-border shadow-sm border-l-[3px] ${borderCls} px-4 py-2.5 flex items-center justify-between gap-3 mb-5 max-w-sm`}>
+  return(<div className={`bg-white rounded-xl border border-ss-border shadow-sm border-l-[3px] ${borderCls} px-4 py-3 flex items-center justify-between gap-3 mb-5`}>
     <div>
       <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Current step</div>
       <div className="text-[14px] font-bold text-navy">{activeLabel||'Complete!'}</div>
@@ -406,7 +407,7 @@ export default function TrackerPage(){
         </div>}
       </div>
       <div className="mt-6 text-center text-[11px] text-gray-400 leading-relaxed">
-        <p className="font-medium text-gray-500 mb-1">Second Street CR, S.R.L.</p>
+        <p className="font-medium text-gray-500 mb-1">Second Street Inc. &bull; Second Street CR, S.R.L.</p>
         <p>This page updates automatically as your loan progresses.</p>
         <p className="mt-1">Questions? <a href="mailto:hello@mysecondstreet.com" className="text-ss-blue">hello@mysecondstreet.com</a> &bull; <a href="tel:+19493391660" className="text-ss-blue">+1 (949) 339-1660</a></p>
       </div>
