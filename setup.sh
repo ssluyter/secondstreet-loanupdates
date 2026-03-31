@@ -14,7 +14,7 @@ ENDFILE
 
 cat > server/digifi.js << 'ENDFILE'
 const fetch=require('node-fetch');
-const DIGIFI_BASE=process.env.DIGIFI_API_BASE_URL||'https://api.sandbox.digifi.io';
+const DIGIFI_BASE=process.env.DIGIFI_API_BASE_URL||'https://api.cloud.digifi.io';
 const DIGIFI_KEY=process.env.DIGIFI_API_KEY;
 const TOKEN_VAR=process.env.DIGIFI_TRACKING_TOKEN_VAR||'loan_status_tracking_token';
 const VAR_MAP={
@@ -24,6 +24,8 @@ const VAR_MAP={
   escrow_opened:'trust_and_escrow_request_date',appraisal_ordered:'property_appraisal_request_date',
   dd_ordered:'property_due_diligence_ordered_date',appraisal_received:'property_appraisal_delivered_date',
   dd_cleared:'property_due_diligence_delivered_date',close_of_escrow:'borrower_close_of_escrow_date',
+  submitted_to_uw:'submitted_to_uw_date',
+  clear_to_close:'clear_to_close_date',closing_docs_issued:'closing_docs_issued_date',loan_funded:'loan_funded_date',
   lo_name:'assigned_loan_officer',lo_email:'assigned_loan_officer_email',lo_phone:'assigned_loan_officer_phone',
   processor_name:'assigned_processor',processor_email:'assigned_processor_email',
   settlement_name:'settlement_agent_contact',settlement_email:'settlement_agent_email',
@@ -34,68 +36,56 @@ var STATUS_ORDER=['Application Started','Incomes and Employment','Financial Asse
 function statusAtOrPast(cs,ts){var ci=STATUS_ORDER.indexOf(cs);var ti=STATUS_ORDER.indexOf(ts);if(ci===-1||ti===-1)return false;return ci>=ti;}
 var PHOTO_MAP={'Raj Ponniah':'/assets/raj.jpg','Alex Borges':'/assets/alex.jpg','Sanam Parwani':'/assets/sanam.jpg'};
 function hasDate(v){return v&&typeof v==='string'&&v.trim()!=='';}
+function formatDate(d){if(!d)return null;try{var dt=new Date(d);if(isNaN(dt.getTime()))return d;return dt.toLocaleDateString('en-US',{month:'2-digit',day:'2-digit',year:'numeric'});}catch(e){return d;}}
 
-function computeRingColor(vars, milestones, closeOfEscrow) {
-  var ddOrderDateStr = vars[VAR_MAP.dd_ordered] || null;
-  var ddReceivedDateStr = vars[VAR_MAP.dd_cleared] || null;
-  var closeDateStr = closeOfEscrow || null;
-  if (!closeDateStr) return 'green';
-  var today = new Date(); today.setHours(0,0,0,0);
-  var closeDate; try { closeDate = new Date(closeDateStr); closeDate.setHours(0,0,0,0); } catch(e) { return 'green'; }
-  if (isNaN(closeDate.getTime())) return 'green';
-  var daysUntilClose = Math.ceil((closeDate - today) / 86400000);
-  var criticalLabels = ['PSA received','Escrow opened','Appraisal ordered','Due diligence ordered','Appraisal received','Due diligence cleared'];
-  var criticalDone = milestones.filter(function(m) { return criticalLabels.indexOf(m.label) !== -1 && m.status === 'done'; }).length;
-  var criticalRemaining = 6 - criticalDone;
-  var ddReceived = hasDate(ddReceivedDateStr);
-  if (!ddReceived) {
-    if (!hasDate(ddOrderDateStr)) return 'red';
-    var ddOrderDate; try { ddOrderDate = new Date(ddOrderDateStr); ddOrderDate.setHours(0,0,0,0); } catch(e) { return 'red'; }
-    if (isNaN(ddOrderDate.getTime())) return 'red';
-    var ddExpected = new Date(ddOrderDate.getTime() + 21 * 86400000);
-    var ddExpectedPlusBuffer = new Date(ddExpected.getTime() + 3 * 86400000);
-    if (ddExpectedPlusBuffer > closeDate) return 'red';
-    if (ddExpected <= today) return 'yellow';
+function computeRingColor(vars,milestones,closeOfEscrow){
+  var ddOrderDateStr=vars[VAR_MAP.dd_ordered]||null;
+  var ddReceivedDateStr=vars[VAR_MAP.dd_cleared]||null;
+  var closeDateStr=closeOfEscrow||null;
+  if(!closeDateStr)return 'green';
+  var today=new Date();today.setHours(0,0,0,0);
+  var closeDate;try{closeDate=new Date(closeDateStr);closeDate.setHours(0,0,0,0);}catch(e){return 'green';}
+  if(isNaN(closeDate.getTime()))return 'green';
+  var daysUntilClose=Math.ceil((closeDate-today)/86400000);
+  var criticalLabels=['PSA received','Escrow opened','Appraisal ordered','Due diligence ordered','Appraisal received','Due diligence cleared'];
+  var criticalDone=milestones.filter(function(m){return criticalLabels.indexOf(m.label)!==-1&&m.status==='done';}).length;
+  var criticalRemaining=6-criticalDone;
+  if(criticalRemaining===0&&daysUntilClose<0)return 'green';
+  if(daysUntilClose<0)return 'red';
+  var ddReceived=hasDate(ddReceivedDateStr);
+  if(!ddReceived){
+    if(!hasDate(ddOrderDateStr))return 'red';
+    var ddOrderDate;try{ddOrderDate=new Date(ddOrderDateStr);ddOrderDate.setHours(0,0,0,0);}catch(e){return 'red';}
+    if(isNaN(ddOrderDate.getTime()))return 'red';
+    var ddExpected=new Date(ddOrderDate.getTime()+21*86400000);
+    var ddExpectedPlusBuffer=new Date(ddExpected.getTime()+3*86400000);
+    if(ddExpectedPlusBuffer>closeDate)return 'red';
+    if(ddExpected<=today)return 'yellow';
   }
-  if(criticalRemaining===0)return 'green';if(daysUntilClose<0)return 'red';
-  if (daysUntilClose < 3) { return criticalRemaining > 0 ? 'red' : 'green'; }
-  if (daysUntilClose >= 3 && daysUntilClose < 10) {
-    if (criticalRemaining >= 2) return 'red';
-    if (criticalRemaining === 1) return 'yellow';
-    return 'green';
-  }
-  if (daysUntilClose >= 10 && daysUntilClose < 20) {
-    if (criticalRemaining >= 4) return 'red';
-    if (criticalRemaining === 3) return 'yellow';
-    return 'green';
-  }
-  if (daysUntilClose >= 20 && daysUntilClose < 28) {
-    if (criticalRemaining >= 5) return 'red';
-    if (criticalRemaining === 4) return 'yellow';
-    return 'green';
-  }
-  if (daysUntilClose >= 28 && daysUntilClose <= 42) {
-    if (criticalRemaining >= 5) return 'yellow';
-    return 'green';
-  }
+  if(criticalRemaining===0)return 'green';
+  if(daysUntilClose<3){return criticalRemaining>0?'red':'green';}
+  if(daysUntilClose>=3&&daysUntilClose<10){if(criticalRemaining>=2)return 'red';if(criticalRemaining===1)return 'yellow';return 'green';}
+  if(daysUntilClose>=10&&daysUntilClose<20){if(criticalRemaining>=4)return 'red';if(criticalRemaining===3)return 'yellow';return 'green';}
+  if(daysUntilClose>=20&&daysUntilClose<28){if(criticalRemaining>=5)return 'red';if(criticalRemaining===4)return 'yellow';return 'green';}
+  if(daysUntilClose>=28&&daysUntilClose<=42){if(criticalRemaining>=5)return 'yellow';return 'green';}
   return 'green';
 }
 
-function buildMilestones(vars,appStatus){
+function buildMilestones(vars,appStatus,appCreatedAt){
   var raw=[
-    {label:'Application received',dateKey:null,noDate:true,section:'Application',statusTrigger:null,countInRing:true},
-    {label:'Submitted to underwriting',dateKey:null,noDate:true,section:'Application',statusTrigger:null,countInRing:true},
-    {label:'Pre-approval issued',dateKey:'pal_delivery_date',noDate:false,section:'Application',statusTrigger:null,countInRing:true},
-    {label:'PSA received',dateKey:'psa_received',noDate:false,section:'PSA & services ordered',statusTrigger:null,countInRing:true},
-    {label:'Escrow opened',dateKey:'escrow_opened',noDate:false,section:'PSA & services ordered',statusTrigger:null,countInRing:true},
-    {label:'Appraisal ordered',dateKey:'appraisal_ordered',noDate:false,section:'PSA & services ordered',statusTrigger:null,countInRing:true},
-    {label:'Due diligence ordered',dateKey:'dd_ordered',noDate:false,section:'PSA & services ordered',statusTrigger:null,countInRing:true},
-    {label:'Awaiting clearances',dateKey:null,noDate:true,section:'Awaiting clearances',statusTrigger:null,countInRing:false},
-    {label:'Appraisal received',dateKey:'appraisal_received',noDate:false,section:'Results & clearances',statusTrigger:null,countInRing:true},
-    {label:'Due diligence cleared',dateKey:'dd_cleared',noDate:false,section:'Results & clearances',statusTrigger:null,countInRing:true},
-    {label:'Clear to close',dateKey:null,noDate:true,section:'Closing',statusTrigger:'Clear to Close',countInRing:true},
-    {label:'Closing documents issued',dateKey:null,noDate:true,section:'Closing',statusTrigger:'Closing Docs Issued',countInRing:true},
-    {label:'Closing complete',dateKey:null,noDate:true,section:'Closing',statusTrigger:'Funded',countInRing:true},
+    {label:'Application received',dateKey:null,noDate:false,section:'Application',statusTrigger:null,countInRing:true,useCreatedAt:true},
+    {label:'Submitted to underwriting',dateKey:'submitted_to_uw',noDate:false,section:'Application',statusTrigger:null,countInRing:true,useCreatedAt:false},
+    {label:'Pre-approval issued',dateKey:'pal_delivery_date',noDate:false,section:'Application',statusTrigger:null,countInRing:true,useCreatedAt:false},
+    {label:'PSA received',dateKey:'psa_received',noDate:false,section:'PSA & services ordered',statusTrigger:null,countInRing:true,useCreatedAt:false},
+    {label:'Escrow opened',dateKey:'escrow_opened',noDate:false,section:'PSA & services ordered',statusTrigger:null,countInRing:true,useCreatedAt:false},
+    {label:'Appraisal ordered',dateKey:'appraisal_ordered',noDate:false,section:'PSA & services ordered',statusTrigger:null,countInRing:true,useCreatedAt:false},
+    {label:'Due diligence ordered',dateKey:'dd_ordered',noDate:false,section:'PSA & services ordered',statusTrigger:null,countInRing:true,useCreatedAt:false},
+    {label:'Awaiting clearances',dateKey:null,noDate:true,section:'Awaiting clearances',statusTrigger:null,countInRing:false,useCreatedAt:false},
+    {label:'Appraisal received',dateKey:'appraisal_received',noDate:false,section:'Results & clearances',statusTrigger:null,countInRing:true,useCreatedAt:false},
+    {label:'Due diligence cleared',dateKey:'dd_cleared',noDate:false,section:'Results & clearances',statusTrigger:null,countInRing:true,useCreatedAt:false},
+    {label:'Clear to close',dateKey:'clear_to_close',noDate:false,section:'Closing',statusTrigger:'Clear to Close',countInRing:true,useCreatedAt:false},
+    {label:'Closing documents issued',dateKey:'closing_docs_issued',noDate:false,section:'Closing',statusTrigger:'Closing Docs Issued',countInRing:true,useCreatedAt:false},
+    {label:'Closing complete',dateKey:'loan_funded',noDate:false,section:'Closing',statusTrigger:'Funded',countInRing:true,useCreatedAt:false},
   ];
   var anyDateStepHasDate=raw.slice(2).some(function(m){if(m.noDate||!m.dateKey)return false;return hasDate(vars[VAR_MAP[m.dateKey]]);});
   var serviceLabels=['PSA received','Escrow opened','Appraisal ordered','Due diligence ordered'];
@@ -103,22 +93,27 @@ function buildMilestones(vars,appStatus){
   var firstPending=-1;
   var result=raw.map(function(m,i){
     var date=null;var status;
-    if(m.dateKey&&VAR_MAP[m.dateKey])date=vars[VAR_MAP[m.dateKey]]||null;
-    if(m.label==='Awaiting clearances'){status='pending';return{label:m.label,date:null,noDate:true,status:status,section:m.section,countInRing:false};}
+    if(m.useCreatedAt){date=appCreatedAt||null;}
+    else if(m.dateKey&&VAR_MAP[m.dateKey]){date=vars[VAR_MAP[m.dateKey]]||null;}
+    if(m.label==='Awaiting clearances'){return{label:m.label,date:null,noDate:true,status:'pending',section:m.section,countInRing:false};}
     if(i===0){status='done';}
-    else if(i===1){status=anyDateStepHasDate?'done':(firstPending===-1?'active':'pending');if(status!=='done'&&firstPending===-1)firstPending=i;}
-    else if(m.statusTrigger){if(statusAtOrPast(appStatus,m.statusTrigger)){status='done';}else{status=firstPending===-1?'active':'pending';if(firstPending===-1)firstPending=i;}}
+    else if(i===1){
+      if(hasDate(date)){status='done';}
+      else{status=anyDateStepHasDate?'done':(firstPending===-1?'active':'pending');if(status!=='done'&&firstPending===-1)firstPending=i;}
+    }
+    else if(m.statusTrigger){
+      if(statusAtOrPast(appStatus,m.statusTrigger)){status='done';if(!hasDate(date))date=null;}
+      else{status=firstPending===-1?'active':'pending';if(firstPending===-1)firstPending=i;}
+    }
     else{if(hasDate(date)){status='done';}else{status=firstPending===-1?'active':'pending';if(firstPending===-1)firstPending=i;}}
-    return{label:m.label,date:hasDate(date)?date:null,noDate:m.noDate,status:status,section:m.section,countInRing:m.countInRing};
+    return{label:m.label,date:hasDate(date)?formatDate(date):null,noDate:m.noDate,status:status,section:m.section,countInRing:m.countInRing};
   });
   var allServicesDone=serviceLabels.every(function(l){var m=result.find(function(x){return x.label===l;});return m&&m.status==='done';});
   var anyResultPending=resultLabels.some(function(l){var m=result.find(function(x){return x.label===l;});return m&&m.status!=='done';});
   var awIdx=result.findIndex(function(x){return x.label==='Awaiting clearances';});
   if(awIdx!==-1){
-    if(allServicesDone&&anyResultPending){
-      var hasActiveElsewhere=result.some(function(x,xi){return xi!==awIdx&&x.status==='active';});
-      result[awIdx].status=hasActiveElsewhere?'pending':'active';
-    }else if(allServicesDone&&!anyResultPending){result[awIdx].status='done';}
+    if(allServicesDone&&anyResultPending){var hasActiveElsewhere=result.some(function(x,xi){return xi!==awIdx&&x.status==='active';});result[awIdx].status=hasActiveElsewhere?'pending':'active';}
+    else if(allServicesDone&&!anyResultPending){result[awIdx].status='done';}
     else{result[awIdx].status='pending';}
   }
   return result;
@@ -127,25 +122,25 @@ function buildMilestones(vars,appStatus){
 const MOCK_DATA={
   borrower_first_name:'John',borrower_last_name:'Garcia',
   property_address:'123 Playa Hermosa, Guanacaste, Costa Rica',
-  close_of_escrow:'April 15, 2026',ring_color:'green',
+  close_of_escrow:'04/15/2026',ring_color:'green',
   lo_name:'Raj Ponniah',lo_email:'raj@mysecondstreet.com',lo_phone:'+1 (949) 339-1660',lo_photo:'/assets/raj.jpg',
   processor_name:'Sanam Parwani',processor_email:'sanam@mysecondstreet.com',processor_photo:'/assets/sanam.jpg',
   settlement_name:'Jane Martinez',settlement_email:'jane@lawfirm.com',
   agent_name:'Maria Rodriguez',agent_email:'maria@realty.com',
   milestones:[
-    {label:'Application received',date:null,noDate:true,status:'done',section:'Application',countInRing:true},
-    {label:'Submitted to underwriting',date:null,noDate:true,status:'done',section:'Application',countInRing:true},
-    {label:'Pre-approval issued',date:'Jan 15, 2026',noDate:false,status:'done',section:'Application',countInRing:true},
-    {label:'PSA received',date:'Jan 20, 2026',noDate:false,status:'done',section:'PSA & services ordered',countInRing:true},
-    {label:'Escrow opened',date:'Jan 22, 2026',noDate:false,status:'done',section:'PSA & services ordered',countInRing:true},
-    {label:'Appraisal ordered',date:'Jan 25, 2026',noDate:false,status:'done',section:'PSA & services ordered',countInRing:true},
-    {label:'Due diligence ordered',date:'Jan 28, 2026',noDate:false,status:'done',section:'PSA & services ordered',countInRing:true},
+    {label:'Application received',date:'01/05/2026',noDate:false,status:'done',section:'Application',countInRing:true},
+    {label:'Submitted to underwriting',date:'01/08/2026',noDate:false,status:'done',section:'Application',countInRing:true},
+    {label:'Pre-approval issued',date:'01/15/2026',noDate:false,status:'done',section:'Application',countInRing:true},
+    {label:'PSA received',date:'01/20/2026',noDate:false,status:'done',section:'PSA & services ordered',countInRing:true},
+    {label:'Escrow opened',date:'01/22/2026',noDate:false,status:'done',section:'PSA & services ordered',countInRing:true},
+    {label:'Appraisal ordered',date:'01/25/2026',noDate:false,status:'done',section:'PSA & services ordered',countInRing:true},
+    {label:'Due diligence ordered',date:'01/28/2026',noDate:false,status:'done',section:'PSA & services ordered',countInRing:true},
     {label:'Awaiting clearances',date:null,noDate:true,status:'active',section:'Awaiting clearances',countInRing:false},
     {label:'Appraisal received',date:null,noDate:false,status:'pending',section:'Results & clearances',countInRing:true},
     {label:'Due diligence cleared',date:null,noDate:false,status:'pending',section:'Results & clearances',countInRing:true},
-    {label:'Clear to close',date:null,noDate:true,status:'pending',section:'Closing',countInRing:true},
-    {label:'Closing documents issued',date:null,noDate:true,status:'pending',section:'Closing',countInRing:true},
-    {label:'Closing complete',date:null,noDate:true,status:'pending',section:'Closing',countInRing:true},
+    {label:'Clear to close',date:null,noDate:false,status:'pending',section:'Closing',countInRing:true},
+    {label:'Closing documents issued',date:null,noDate:false,status:'pending',section:'Closing',countInRing:true},
+    {label:'Closing complete',date:null,noDate:false,status:'pending',section:'Closing',countInRing:true},
   ],
 };
 
@@ -167,16 +162,19 @@ async function getApplicationByToken(token){
     var appLastName=(vars[VAR_MAP.borrower_last_name]||'').toLowerCase();
     if(appLastName!==lastName){return{success:false,error:'not_found'};}
     var appStatus=(app.status&&typeof app.status==='object'?app.status.name:app.statusName||app.status)||'';
-    var milestones=buildMilestones(vars,appStatus);
+    var appCreatedAt=app.createdAt?formatDate(app.createdAt):null;
+    var milestones=buildMilestones(vars,appStatus,appCreatedAt);
     var ringMilestones=milestones.filter(function(m){return m.countInRing;});
     var completedCount=ringMilestones.filter(function(m){return m.status==='done';}).length;
     var totalRing=ringMilestones.length;
     var closeOfEscrow=vars[VAR_MAP.close_of_escrow]||null;
     var ringColor=computeRingColor(vars,milestones,closeOfEscrow);
     var loName=vars[VAR_MAP.lo_name]||'';var procName=vars[VAR_MAP.processor_name]||'';
+    var active=milestones.find(function(m){return m.status==='active';});
     return{success:true,data:{
       borrower_first_name:vars[VAR_MAP.borrower_first_name]||'',borrower_last_name:vars[VAR_MAP.borrower_last_name]||'',
-      property_address:vars[VAR_MAP.property_address]||'',close_of_escrow:closeOfEscrow,ring_color:ringColor,
+      property_address:vars[VAR_MAP.property_address]||'',close_of_escrow:closeOfEscrow?formatDate(closeOfEscrow):null,ring_color:ringColor,
+      active_label:active?active.label:null,
       lo_name:loName,lo_email:vars[VAR_MAP.lo_email]||'',lo_phone:vars[VAR_MAP.lo_phone]||'',lo_photo:PHOTO_MAP[loName]||null,
       processor_name:procName,processor_email:vars[VAR_MAP.processor_email]||'',processor_photo:PHOTO_MAP[procName]||null,
       settlement_name:vars[VAR_MAP.settlement_name]||'',settlement_email:vars[VAR_MAP.settlement_email]||'',
@@ -197,7 +195,7 @@ var rateLimitMap=new Map();
 function rateLimit(req,res,next){var ip=req.ip||req.connection.remoteAddress;var now=Date.now();var entry=rateLimitMap.get(ip);if(!entry||now-entry.start>60000){rateLimitMap.set(ip,{start:now,count:1});return next();}entry.count++;if(entry.count>30)return res.status(429).json({error:'Too many requests.'});next();}
 app.get('/api/track/:token',rateLimit,async function(req,res){
   var token=req.params.token;
-  if(!token||token.length<4||token.length>64||!/^[a-zA-Z0-9\-_]+$/.test(token)){return res.status(400).json({error:'Invalid tracking code.'});}
+  if(!token||token.length<3||token.length>128||!/^[a-zA-Z0-9\-_]+$/.test(token)){return res.status(400).json({error:'Invalid tracking code.'});}
   try{var result=await digifi.getApplicationByToken(token);if(!result.success){if(result.error==='not_found')return res.status(404).json({error:'No loan found for this tracking code.'});return res.status(502).json({error:'Unable to retrieve loan status.'});}return res.json(result.data);}
   catch(err){console.error('Track error:',err);return res.status(500).json({error:'An unexpected error occurred.'});}
 });
@@ -255,12 +253,12 @@ cat > client/src/components/ProgressRing.jsx << 'ENDFILE'
 import React,{useEffect,useState} from 'react';
 const RING_COLORS={green:'#22c55e',yellow:'#eab308',red:'#ef4444'};
 export default function ProgressRing({completed,total,color}){
-  const[offset,setOffset]=useState(194.8);const pct=Math.round((completed/total)*100);const c=194.8;
+  const c=232.5;const[offset,setOffset]=useState(c);const pct=Math.round((completed/total)*100);
   const strokeColor=RING_COLORS[color]||RING_COLORS.green;
   useEffect(()=>{const t=setTimeout(()=>setOffset(c-(c*pct/100)),300);return()=>clearTimeout(t)},[pct]);
-  return(<div className="relative w-[80px] h-[80px] flex-shrink-0">
-    <svg viewBox="0 0 76 76" className="-rotate-90"><circle cx="38" cy="38" r="31" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="5"/><circle cx="38" cy="38" r="31" fill="none" stroke={strokeColor} strokeWidth="5" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset} style={{transition:'stroke-dashoffset 1.2s ease'}}/></svg>
-    <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-[20px] font-bold text-white leading-none">{pct}%</span><span className="text-[8px] text-white/55 uppercase tracking-wider mt-0.5">Complete</span></div>
+  return(<div className="relative w-[90px] h-[90px] flex-shrink-0">
+    <svg viewBox="0 0 90 90" className="-rotate-90"><circle cx="45" cy="45" r="37" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="5"/><circle cx="45" cy="45" r="37" fill="none" stroke={strokeColor} strokeWidth="5" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset} style={{transition:'stroke-dashoffset 1.2s ease'}}/></svg>
+    <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-[18px] font-bold text-white leading-none">{pct}%</span><span className="text-[7px] text-white/50 uppercase tracking-wider mt-0.5">Complete</span></div>
   </div>);
 }
 ENDFILE
@@ -335,25 +333,12 @@ export default function MilestoneSection({title,milestones}){
 }
 ENDFILE
 
-cat > client/src/components/StatusBar.jsx << 'ENDFILE'
-import React from 'react';
-export default function StatusBar({activeLabel,ringColor}){
-  const rc=ringColor||'green';
-  const borderCls=rc==='red'?'border-l-red-500':rc==='yellow'?'border-l-amber-400':'border-l-green-500';
-  return(<div className={`bg-white rounded-xl border border-ss-border shadow-sm border-l-[3px] ${borderCls} px-4 py-2.5 mb-5 inline-block`}>
-    <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Current step</div>
-    <div className="text-[14px] font-bold text-navy">{activeLabel||'Complete!'}</div>
-  </div>);
-}
-ENDFILE
-
 cat > client/src/pages/TrackerPage.jsx << 'ENDFILE'
 import React,{useEffect,useState} from 'react';
 import {useParams} from 'react-router-dom';
 import ProgressRing from '../components/ProgressRing';
 import MilestoneSection from '../components/MilestoneSection';
 import ContactCard from '../components/ContactCard';
-import StatusBar from '../components/StatusBar';
 export default function TrackerPage(){
   const{token}=useParams();
   const[data,setData]=useState(null);const[error,setError]=useState(null);const[loading,setLoading]=useState(true);
@@ -363,6 +348,8 @@ export default function TrackerPage(){
   const done=data.milestones.filter(m=>m.countInRing&&m.status==='done').length;
   const active=data.milestones.find(m=>m.status==='active');
   const total=data.milestones.filter(m=>m.countInRing).length;
+  const rc=data.ring_color||'green';
+  const borderCls=rc==='red'?'border-l-red-500':rc==='yellow'?'border-l-amber-400':'border-l-green-500';
   const sections=[];var cs=null;
   data.milestones.forEach(function(m){if(m.section!==cs){cs=m.section;sections.push({title:cs,milestones:[]});}sections[sections.length-1].milestones.push(m);});
   return(<div className="min-h-screen bg-[#F5F6FA]">
@@ -374,18 +361,26 @@ export default function TrackerPage(){
           <img src="/assets/logo-white.jpg" alt="Second Street" className="h-7 rounded"/>
           <span className="text-white/40 text-[10px] font-semibold uppercase tracking-wider sm:mb-[3px]">Loan Status</span>
         </div>
-        <div className="flex items-center gap-5 flex-wrap">
-          <ProgressRing completed={done} total={total} color={data.ring_color||'green'}/>
-          <div>
-            <h1 className="text-xl text-white mb-1 font-bold">{data.borrower_first_name} {data.borrower_last_name}</h1>
-            <p className="text-[12px] text-white/65 leading-relaxed">{data.property_address}</p>
-            {data.close_of_escrow&&<div className="mt-1.5 text-[11px] font-semibold text-white/85">Close of escrow: <span className="bg-amber-400/20 text-amber-300 px-2.5 py-0.5 rounded-full ml-1">{data.close_of_escrow}</span></div>}
+        <div className="flex items-start gap-5 flex-wrap">
+          <ProgressRing completed={done} total={total} color={rc}/>
+          <div className="flex-1 min-w-[200px]">
+            <div className="text-[18px] text-white mb-1 font-bold">{data.borrower_first_name} {data.borrower_last_name}</div>
+            <div className="text-[11px] text-white/60 mb-3">{data.property_address}</div>
+            <div className="flex gap-2 flex-wrap">
+              <div className="bg-white/[0.08] rounded-lg px-3 py-2 flex-1 min-w-[120px] max-w-[200px]">
+                <div className="text-[9px] text-white/45 uppercase tracking-wider font-semibold">Current step</div>
+                <div className="text-[13px] text-white font-bold mt-0.5">{active?active.label:'Complete!'}</div>
+              </div>
+              {data.close_of_escrow&&<div className="bg-white/[0.08] rounded-lg px-3 py-2 min-w-[110px] max-w-[160px]">
+                <div className="text-[9px] text-white/45 uppercase tracking-wider font-semibold">Close of escrow</div>
+                <div className="text-[13px] text-amber-300 font-bold mt-0.5">{data.close_of_escrow}</div>
+              </div>}
+            </div>
           </div>
         </div>
       </div>
     </div>
-    <div className="max-w-3xl mx-auto px-6 -mt-5 relative z-20 pb-10">
-      <StatusBar activeLabel={active?active.label:null} ringColor={data.ring_color}/>
+    <div className="max-w-3xl mx-auto px-6 -mt-3 relative z-20 pb-10">
       {sections.map(s=><MilestoneSection key={s.title} title={s.title} milestones={s.milestones}/>)}
       <div className="flex flex-col gap-2.5 mt-4">
         <div className="bg-white rounded-xl border border-ss-border p-4">
