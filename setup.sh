@@ -44,7 +44,6 @@ function computeRingColor(vars, milestones, closeOfEscrow) {
   var closeDate; try { closeDate = new Date(closeDateStr); closeDate.setHours(0,0,0,0); } catch(e) { return 'green'; }
   if (isNaN(closeDate.getTime())) return 'green';
   var daysUntilClose = Math.ceil((closeDate - today) / 86400000);
-  if(criticalRemaining===0&&daysUntilClose<0)return 'green';if(daysUntilClose<0)return 'red';
   var criticalLabels = ['PSA received','Escrow opened','Appraisal ordered','Due diligence ordered','Appraisal received','Due diligence cleared'];
   var criticalDone = milestones.filter(function(m) { return criticalLabels.indexOf(m.label) !== -1 && m.status === 'done'; }).length;
   var criticalRemaining = 6 - criticalDone;
