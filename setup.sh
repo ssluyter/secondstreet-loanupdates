@@ -154,7 +154,7 @@ async function getApplicationByToken(token){
   if(!DIGIFI_KEY||DIGIFI_KEY==='your_digifi_api_key_here'){return{success:false,error:'not_found'};}
   try{
     var searchUrl=DIGIFI_BASE+'/applications/search?searchByFields='+encodeURIComponent(TOKEN_VAR)+'&searchValue='+encodeURIComponent(token)+'&limit=1';
-    var response=await fetch(searchUrl,{headers:{'Authorization': 'ApiKey ' + DIGIFI_KEY,'Content-Type':'application/json'}});
+    var response=await fetch(searchUrl,{headers:{'x-api-key': DIGIFI_KEY, 'Authorization': 'Bearer ' + DIGIFI_KEY,'Content-Type':'application/json'}});
     if(!response.ok){console.error('Digifi API error: '+response.status);var errBody=await response.text();console.error(errBody);return{success:false,error:'api_error'};}
     var result=await response.json();
     var applications=result.items||result.data||result.applications||result;
