@@ -356,7 +356,7 @@ export default function TrackerPage(){
     <div className="bg-gradient-to-br from-navy via-[#1a2468] to-ss-blue relative overflow-hidden">
       <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/[0.04]"/>
       <div className="absolute -bottom-6 right-20 w-24 h-24 rounded-full bg-white/[0.03]"/>
-      <div className="max-w-3xl mx-auto px-6 py-8 relative z-10">
+      <div className="max-w-3xl mx-auto px-6 pt-8 pb-10 relative z-10">
         <div className="flex flex-col items-center sm:flex-row sm:items-end gap-2 sm:gap-6 mb-6">
           <img src="/assets/logo-white.jpg" alt="Second Street" className="h-7 rounded"/>
           <span className="text-white/40 text-[10px] font-semibold uppercase tracking-wider sm:mb-[3px]">Loan Status</span>
@@ -366,21 +366,21 @@ export default function TrackerPage(){
           <div className="flex-1 min-w-[200px]">
             <div className="text-[18px] text-white mb-1 font-bold">{data.borrower_first_name} {data.borrower_last_name}</div>
             <div className="text-[11px] text-white/60 mb-3">{data.property_address}</div>
-            <div className="flex gap-2 flex-wrap">
-              <div className="bg-white/[0.08] rounded-lg px-3 py-2 flex-1 min-w-[120px] max-w-[200px]">
+            <div className="inline-flex gap-2 flex-wrap">
+              <div className="bg-white/[0.08] rounded-lg px-3 py-1.5">
                 <div className="text-[9px] text-white/45 uppercase tracking-wider font-semibold">Current step</div>
-                <div className="text-[13px] text-white font-bold mt-0.5">{active?active.label:'Complete!'}</div>
+                <div className="text-[12px] text-white font-bold mt-0.5">{active?active.label:'Complete!'}</div>
               </div>
-              {data.close_of_escrow&&<div className="bg-white/[0.08] rounded-lg px-3 py-2 min-w-[110px] max-w-[160px]">
+              {data.close_of_escrow&&<div className="bg-white/[0.08] rounded-lg px-3 py-1.5">
                 <div className="text-[9px] text-white/45 uppercase tracking-wider font-semibold">Close of escrow</div>
-                <div className="text-[13px] text-amber-300 font-bold mt-0.5">{data.close_of_escrow}</div>
+                <div className="text-[12px] text-amber-300 font-bold mt-0.5">{data.close_of_escrow}</div>
               </div>}
             </div>
           </div>
         </div>
       </div>
     </div>
-    <div className="max-w-3xl mx-auto px-6 -mt-3 relative z-20 pb-10">
+    <div className="max-w-3xl mx-auto px-6 -mt-2 relative z-20 pb-10 pt-4">
       {sections.map(s=><MilestoneSection key={s.title} title={s.title} milestones={s.milestones}/>)}
       <div className="flex flex-col gap-2.5 mt-4">
         <div className="bg-white rounded-xl border border-ss-border p-4">
@@ -396,7 +396,7 @@ export default function TrackerPage(){
         </div>}
       </div>
       <div className="mt-6 text-center text-[11px] text-gray-400 leading-relaxed">
-        <p className="font-medium text-gray-500 mb-1">Second Street Inc. &bull; Second Street CR, S.R.L.</p>
+        <p className="font-medium text-gray-500 mb-1">Second Street CR, S.R.L.</p>
         <p>This page updates automatically as your loan progresses.</p>
         <p className="mt-1">Questions? <a href="mailto:hello@mysecondstreet.com" className="text-ss-blue">hello@mysecondstreet.com</a> &bull; <a href="tel:+19493391660" className="text-ss-blue">+1 (949) 339-1660</a></p>
       </div>
