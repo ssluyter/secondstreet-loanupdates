@@ -153,7 +153,10 @@ async function getApplicationByToken(token){
   if(token==='demo'||token==='test'){console.log('[DEV] Demo token');return{success:true,data:MOCK_DATA};}
   if(!DIGIFI_KEY||DIGIFI_KEY==='your_digifi_api_key_here'){return{success:false,error:'not_found'};}
   try{
-    var searchUrl=DIGIFI_BASE+'/applications/search?searchByFields='+encodeURIComponent(TOKEN_VAR)+'&searchValue='+encodeURIComponent(token)+'&limit=1';
+    var lastDash=token.lastIndexOf('-');if(lastDash===-1){return{success:false,error:'not_found'};}
+    var lastName=token.substring(0,lastDash).toLowerCase();var loanNumber=token.substring(lastDash+1);
+    if(!loanNumber||!lastName){return{success:false,error:'not_found'};}
+    var searchUrl=DIGIFI_BASE+'/applications/search?searchByFields=displayId&searchValue='+encodeURIComponent(loanNumber)+'&limit=1';
     var response=await fetch(searchUrl,{headers:{'api-key': DIGIFI_KEY,'Content-Type':'application/json'}});
     if(!response.ok){console.error('Digifi API error: '+response.status);var errBody=await response.text();console.error(errBody);return{success:false,error:'api_error'};}
     var result=await response.json();
@@ -161,6 +164,7 @@ async function getApplicationByToken(token){
     if(!applications||(Array.isArray(applications)&&applications.length===0))return{success:false,error:'not_found'};
     var app=Array.isArray(applications)?applications[0]:applications;
     var vars=app.variables||{};var appStatus=app.statusName||app.status||'';
+    var appLastName=(vars[VAR_MAP.borrower_last_name]||'').toLowerCase();if(appLastName!==lastName){return{success:false,error:'not_found'};}
     var milestones=buildMilestones(vars,appStatus);
     var ringMilestones=milestones.filter(function(m){return m.countInRing;});
     var completedCount=ringMilestones.filter(function(m){return m.status==='done';}).length;
