@@ -44,7 +44,7 @@ function computeRingColor(vars, milestones, closeOfEscrow) {
   var closeDate; try { closeDate = new Date(closeDateStr); closeDate.setHours(0,0,0,0); } catch(e) { return 'green'; }
   if (isNaN(closeDate.getTime())) return 'green';
   var daysUntilClose = Math.ceil((closeDate - today) / 86400000);
-  if(daysUntilClose<0)return 'red';
+  if(criticalRemaining===0&&daysUntilClose<0)return 'green';if(daysUntilClose<0)return 'red';
   var criticalLabels = ['PSA received','Escrow opened','Appraisal ordered','Due diligence ordered','Appraisal received','Due diligence cleared'];
   var criticalDone = milestones.filter(function(m) { return criticalLabels.indexOf(m.label) !== -1 && m.status === 'done'; }).length;
   var criticalRemaining = 6 - criticalDone;
@@ -233,7 +233,7 @@ export default {plugins:{tailwindcss:{},autoprefixer:{}}};
 ENDFILE
 
 cat > client/index.html << 'ENDFILE'
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Loan Status — Second Street</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet"></head><body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="robots" content="noindex, nofollow"/><title>Loan Status — Second Street</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet"></head><body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>
 ENDFILE
 
 cat > client/src/index.css << 'ENDFILE'
@@ -341,14 +341,9 @@ import React from 'react';
 export default function StatusBar({activeLabel,ringColor}){
   const rc=ringColor||'green';
   const borderCls=rc==='red'?'border-l-red-500':rc==='yellow'?'border-l-amber-400':'border-l-green-500';
-  const tagBg=rc==='red'?'bg-red-500/10 text-red-700':rc==='yellow'?'bg-amber-400/10 text-amber-700':'bg-green-500/10 text-green-700';
-  const tagText=rc==='red'?'At risk':rc==='yellow'?'Needs attention':'On track';
-  return(<div className={`bg-white rounded-xl border border-ss-border shadow-sm border-l-[3px] ${borderCls} px-4 py-3 flex items-center justify-between gap-3 mb-5`}>
-    <div>
-      <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Current step</div>
-      <div className="text-[14px] font-bold text-navy">{activeLabel||'Complete!'}</div>
-    </div>
-    <span className={`text-[9px] font-bold uppercase tracking-wide px-2.5 py-1 rounded flex-shrink-0 ${tagBg}`}>{tagText}</span>
+  return(<div className={`bg-white rounded-xl border border-ss-border shadow-sm border-l-[3px] ${borderCls} px-4 py-2.5 gap-3 mb-5`}>
+    <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Current step</div>
+    <div className="text-[14px] font-bold text-navy">{activeLabel||'Complete!'}</div>
   </div>);
 }
 ENDFILE
