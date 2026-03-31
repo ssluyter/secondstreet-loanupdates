@@ -340,7 +340,7 @@ import React from 'react';
 export default function StatusBar({activeLabel,ringColor}){
   const rc=ringColor||'green';
   const borderCls=rc==='red'?'border-l-red-500':rc==='yellow'?'border-l-amber-400':'border-l-green-500';
-  return(<div className={`bg-white rounded-xl border border-ss-border shadow-sm border-l-[3px] ${borderCls} px-4 py-2.5 gap-3 mb-5`}>
+  return(<div className={`bg-white rounded-xl border border-ss-border shadow-sm border-l-[3px] ${borderCls} px-4 py-2.5 mb-5 inline-block`}>
     <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Current step</div>
     <div className="text-[14px] font-bold text-navy">{activeLabel||'Complete!'}</div>
   </div>);
