@@ -380,7 +380,7 @@ export default function TrackerPage(){
         </div>
       </div>
     </div>
-    <div className="max-w-3xl mx-auto px-6 -mt-2 relative z-20 pb-10 pt-4">
+    <div className="max-w-3xl mx-auto px-6 -mt-2 relative z-20 pb-10 pt-6">
       {sections.map(s=><MilestoneSection key={s.title} title={s.title} milestones={s.milestones}/>)}
       <div className="flex flex-col gap-2.5 mt-4">
         <div className="bg-white rounded-xl border border-ss-border p-4">
