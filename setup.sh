@@ -156,7 +156,7 @@ async function getApplicationByToken(token){
     var lastDash=token.lastIndexOf('-');if(lastDash===-1){return{success:false,error:'not_found'};}
     var lastName=token.substring(0,lastDash).toLowerCase();var loanNumber=token.substring(lastDash+1);
     if(!loanNumber||!lastName){return{success:false,error:'not_found'};}
-    var searchUrl=DIGIFI_BASE+'/applications/search?searchByFields=displayId&searchValue='+encodeURIComponent(loanNumber)+'&limit=1';
+    var searchUrl=DIGIFI_BASE+'/applications/'+encodeURIComponent(loanNumber)+'?identifierType=displayId';
     var response=await fetch(searchUrl,{headers:{'api-key': DIGIFI_KEY,'Content-Type':'application/json'}});
     if(!response.ok){console.error('Digifi API error: '+response.status);var errBody=await response.text();console.error(errBody);return{success:false,error:'api_error'};}
     var result=await response.json();
