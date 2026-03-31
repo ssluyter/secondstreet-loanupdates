@@ -163,6 +163,7 @@ async function getApplicationByToken(token){
     var applications=result.items||result.data||result.applications||result;
     if(!applications||(Array.isArray(applications)&&applications.length===0))return{success:false,error:'not_found'};
     var app=Array.isArray(applications)?applications[0]:applications;
+    console.log('[DEBUG] app status:', app.statusName, app.status, app.applicationStatus, JSON.stringify(Object.keys(app)).substring(0,300));
     var vars=app.variables||{};var appStatus=app.statusName||app.status||'';
     var appLastName=(vars[VAR_MAP.borrower_last_name]||'').toLowerCase();if(appLastName!==lastName){return{success:false,error:'not_found'};}
     var milestones=buildMilestones(vars,appStatus);
