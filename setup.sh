@@ -57,7 +57,7 @@ function computeRingColor(vars, milestones, closeOfEscrow) {
     if (ddExpectedPlusBuffer > closeDate) return 'red';
     if (ddExpected <= today) return 'yellow';
   }
-  if (criticalRemaining === 0) return 'green';
+  if(criticalRemaining===0)return 'green';if(daysUntilClose<0)return 'red';
   if (daysUntilClose < 3) { return criticalRemaining > 0 ? 'red' : 'green'; }
   if (daysUntilClose >= 3 && daysUntilClose < 10) {
     if (criticalRemaining >= 2) return 'red';
