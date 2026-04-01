@@ -391,18 +391,18 @@ export default function TrackerPage(){
           <img src="/assets/logo-white.jpg" alt="Second Street" className="h-7 rounded"/>
           <span className="text-white/40 text-[10px] font-semibold uppercase tracking-wider sm:mb-[3px]">Loan Status</span>
         </div>
-        <div className="flex items-start gap-5 flex-wrap">
+        <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-5">
           <ProgressRing completed={done} total={total} color={rc}/>
-          <div className="flex-1 min-w-[200px]">
+          <div className="text-center sm:text-left flex-1">
             <div className="text-[18px] text-white mb-1 font-bold">{data.borrower_first_name} {data.borrower_last_name}</div>
-            <div className="text-[11px] text-white/60 mb-3">{data.property_address}</div>
-            <div className="inline-flex gap-2 flex-wrap">
+            <div className="text-[11px] text-white/75 mb-3">{data.property_address}</div>
+            <div className="inline-flex gap-2 flex-wrap justify-center sm:justify-start">
               <div className="bg-white/[0.08] rounded-lg px-3 py-1.5">
-                <div className="text-[9px] text-white/45 uppercase tracking-wider font-semibold">Status</div>
+                <div className="text-[9px] text-white/65 uppercase tracking-wider font-semibold">Status</div>
                 <div className="text-[12px] text-white font-bold mt-0.5">{data.status_message||'In progress'}</div>
               </div>
               {data.close_of_escrow&&<div className="bg-white/[0.08] rounded-lg px-3 py-1.5">
-                <div className="text-[9px] text-white/45 uppercase tracking-wider font-semibold">Close of escrow</div>
+                <div className="text-[9px] text-white/65 uppercase tracking-wider font-semibold">Close of escrow</div>
                 <div className="text-[12px] text-amber-300 font-bold mt-0.5">{data.close_of_escrow}</div>
               </div>}
             </div>
