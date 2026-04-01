@@ -287,12 +287,12 @@ cat > client/src/components/ProgressRing.jsx << 'ENDFILE'
 import React,{useEffect,useState} from 'react';
 const RING_COLORS={green:'#22c55e',yellow:'#eab308',red:'#ef4444'};
 export default function ProgressRing({completed,total,color}){
-  const c=232.5;const[offset,setOffset]=useState(c);const pct=Math.round((completed/total)*100);
+  const c=263.9;const[offset,setOffset]=useState(c);const pct=Math.round((completed/total)*100);
   const strokeColor=RING_COLORS[color]||RING_COLORS.green;
   useEffect(()=>{const t=setTimeout(()=>setOffset(c-(c*pct/100)),300);return()=>clearTimeout(t)},[pct]);
-  return(<div className="relative w-[90px] h-[90px] flex-shrink-0">
-    <svg viewBox="0 0 90 90" className="-rotate-90"><circle cx="45" cy="45" r="37" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="5"/><circle cx="45" cy="45" r="37" fill="none" stroke={strokeColor} strokeWidth="5" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset} style={{transition:'stroke-dashoffset 1.2s ease'}}/></svg>
-    <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-[18px] font-bold text-white leading-none">{pct}%</span><span className="text-[7px] text-white/50 uppercase tracking-wider mt-0.5">Complete</span></div>
+  return(<div className="relative w-[100px] h-[100px] sm:w-[90px] sm:h-[90px] flex-shrink-0">
+    <svg viewBox="0 0 100 100" className="-rotate-90"><circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="5"/><circle cx="50" cy="50" r="42" fill="none" stroke={strokeColor} strokeWidth="5" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset} style={{transition:'stroke-dashoffset 1.2s ease'}}/></svg>
+    <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-[22px] sm:text-[18px] font-bold text-white leading-none">{pct}%</span><span className="text-[8px] sm:text-[7px] text-white/50 uppercase tracking-wider mt-0.5">Complete</span></div>
   </div>);
 }
 ENDFILE
@@ -396,16 +396,16 @@ export default function TrackerPage(){
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-5">
           <ProgressRing completed={done} total={total} color={rc}/>
           <div className="text-center sm:text-left flex-1">
-            <div className="text-[18px] text-white mb-1 font-bold">{data.borrower_first_name} {data.borrower_last_name}</div>
-            <div className="text-[11px] text-white/75 mb-3">{data.property_address}</div>
+            <div className="text-[22px] sm:text-[18px] text-white mb-1 font-bold">{data.borrower_first_name} {data.borrower_last_name}</div>
+            <div className="text-[13px] sm:text-[12px] text-white/75 mb-3">{data.property_address}</div>
             <div className="inline-flex gap-2 flex-wrap justify-center sm:justify-start">
               <div className="bg-white/[0.08] rounded-lg px-3 py-1.5">
-                <div className="text-[9px] text-white/65 uppercase tracking-wider font-semibold">Status</div>
-                <div className="text-[12px] text-white font-bold mt-0.5">{data.status_message||'In progress'}</div>
+                <div className="text-[10px] text-white/65 uppercase tracking-wider font-semibold">Status</div>
+                <div className="text-[13px] text-white font-bold mt-0.5">{data.status_message||'In progress'}</div>
               </div>
-              {data.close_of_escrow&&<div className="bg-white/[0.08] rounded-lg px-3 py-1.5">
-                <div className="text-[9px] text-white/65 uppercase tracking-wider font-semibold">Close of escrow</div>
-                <div className="text-[12px] text-amber-300 font-bold mt-0.5">{data.close_of_escrow}</div>
+              {data.close_of_escrow&&<div className="bg-white/[0.08] rounded-lg px-3 py-2">
+                <div className="text-[10px] text-white/65 uppercase tracking-wider font-semibold">Close of escrow</div>
+                <div className="text-[15px] text-amber-300 font-bold mt-0.5">{data.close_of_escrow}</div>
               </div>}
             </div>
           </div>
