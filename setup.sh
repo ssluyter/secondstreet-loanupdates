@@ -80,7 +80,6 @@ function buildMilestones(vars,appStatus,appCreatedAt){
     {label:'Escrow opened',dateKey:'escrow_opened',noDate:false,section:'PSA & services ordered',statusTrigger:null,countInRing:true,useCreatedAt:false},
     {label:'Appraisal ordered',dateKey:'appraisal_ordered',noDate:false,section:'PSA & services ordered',statusTrigger:null,countInRing:true,useCreatedAt:false},
     {label:'Due diligence ordered',dateKey:'dd_ordered',noDate:false,section:'PSA & services ordered',statusTrigger:null,countInRing:true,useCreatedAt:false},
-    {label:'Awaiting clearances',dateKey:null,noDate:true,section:'Awaiting clearances',statusTrigger:null,countInRing:false,useCreatedAt:false},
     {label:'Appraisal received',dateKey:'appraisal_received',noDate:false,section:'Results & clearances',statusTrigger:null,countInRing:true,useCreatedAt:false},
     {label:'Due diligence cleared',dateKey:'dd_cleared',noDate:false,section:'Results & clearances',statusTrigger:null,countInRing:true,useCreatedAt:false},
     {label:'Clear to close',dateKey:'clear_to_close',noDate:false,section:'Closing',statusTrigger:'Clear to Close',countInRing:true,useCreatedAt:false},
@@ -88,14 +87,11 @@ function buildMilestones(vars,appStatus,appCreatedAt){
     {label:'Closing complete',dateKey:'loan_funded',noDate:false,section:'Closing',statusTrigger:'Funded',countInRing:true,useCreatedAt:false},
   ];
   var anyDateStepHasDate=raw.slice(2).some(function(m){if(m.noDate||!m.dateKey)return false;return hasDate(vars[VAR_MAP[m.dateKey]]);});
-  var serviceLabels=['PSA received','Escrow opened','Appraisal ordered','Due diligence ordered'];
-  var resultLabels=['Appraisal received','Due diligence cleared'];
   var firstPending=-1;
   var result=raw.map(function(m,i){
     var date=null;var status;
     if(m.useCreatedAt){date=appCreatedAt||null;}
     else if(m.dateKey&&VAR_MAP[m.dateKey]){date=vars[VAR_MAP[m.dateKey]]||null;}
-    if(m.label==='Awaiting clearances'){return{label:m.label,date:null,noDate:true,status:'pending',section:m.section,countInRing:false};}
     if(i===0){status='done';}
     else if(i===1){
       if(hasDate(date)){status='done';}
@@ -108,21 +104,56 @@ function buildMilestones(vars,appStatus,appCreatedAt){
     else{if(hasDate(date)){status='done';}else{status=firstPending===-1?'active':'pending';if(firstPending===-1)firstPending=i;}}
     return{label:m.label,date:hasDate(date)?formatDate(date):null,noDate:m.noDate,status:status,section:m.section,countInRing:m.countInRing};
   });
-  var allServicesDone=serviceLabels.every(function(l){var m=result.find(function(x){return x.label===l;});return m&&m.status==='done';});
-  var anyResultPending=resultLabels.some(function(l){var m=result.find(function(x){return x.label===l;});return m&&m.status!=='done';});
-  var awIdx=result.findIndex(function(x){return x.label==='Awaiting clearances';});
-  if(awIdx!==-1){
-    if(allServicesDone&&anyResultPending){var hasActiveElsewhere=result.some(function(x,xi){return xi!==awIdx&&x.status==='active';});result[awIdx].status=hasActiveElsewhere?'pending':'active';}
-    else if(allServicesDone&&!anyResultPending){result[awIdx].status='done';}
-    else{result[awIdx].status='pending';}
-  }
   return result;
+}
+
+function generateStatusMessage(milestones){
+  var pending=milestones.filter(function(m){return m.status!=='done';});
+  if(pending.length===0)return 'Complete!';
+  var sections={'Application':[],'PSA & services ordered':[],'Results & clearances':[],'Closing':[]};
+  pending.forEach(function(m){if(sections[m.section])sections[m.section].push(m.label);});
+  if(sections['Application'].length>0){
+    var items=sections['Application'];
+    if(items.length===1)return 'Waiting for '+items[0].toLowerCase();
+    return 'Waiting for '+items.map(function(x){return x.toLowerCase();}).join(' & ');
+  }
+  if(sections['PSA & services ordered'].length>0){
+    var items=sections['PSA & services ordered'];
+    var names=items.map(function(x){
+      if(x==='PSA received')return 'purchase agreement';
+      if(x==='Escrow opened')return 'escrow opening';
+      if(x==='Appraisal ordered')return 'appraisal order';
+      if(x==='Due diligence ordered')return 'due diligence order';
+      return x.toLowerCase();
+    });
+    if(names.length===1)return 'Waiting for '+names[0];
+    if(names.length===2)return 'Waiting for '+names[0]+' & '+names[1];
+    return 'Waiting for '+names.slice(0,-1).join(', ')+' & '+names[names.length-1];
+  }
+  if(sections['Results & clearances'].length>0){
+    var items=sections['Results & clearances'];
+    var names=items.map(function(x){
+      if(x==='Appraisal received')return 'appraisal results';
+      if(x==='Due diligence cleared')return 'due diligence clearance';
+      return x.toLowerCase();
+    });
+    if(names.length===1)return 'Waiting for '+names[0];
+    return 'Waiting for '+names[0]+' & '+names[1];
+  }
+  if(sections['Closing'].length>0){
+    var first=sections['Closing'][0];
+    if(first==='Clear to close')return 'Waiting for clear to close';
+    if(first==='Closing documents issued')return 'Waiting for closing documents';
+    if(first==='Closing complete')return 'Waiting for funding';
+    return 'Waiting for '+first.toLowerCase();
+  }
+  return 'In progress';
 }
 
 const MOCK_DATA={
   borrower_first_name:'John',borrower_last_name:'Garcia',
   property_address:'123 Playa Hermosa, Guanacaste, Costa Rica',
-  close_of_escrow:'04/15/2026',ring_color:'green',
+  close_of_escrow:'04/15/2026',ring_color:'green',status_message:'Waiting for appraisal results & due diligence clearance',
   lo_name:'Raj Ponniah',lo_email:'raj@mysecondstreet.com',lo_phone:'+1 (949) 339-1660',lo_photo:'/assets/raj.jpg',
   processor_name:'Sanam Parwani',processor_email:'sanam@mysecondstreet.com',processor_photo:'/assets/sanam.jpg',
   settlement_name:'Jane Martinez',settlement_email:'jane@lawfirm.com',
@@ -135,7 +166,6 @@ const MOCK_DATA={
     {label:'Escrow opened',date:'01/22/2026',noDate:false,status:'done',section:'PSA & services ordered',countInRing:true},
     {label:'Appraisal ordered',date:'01/25/2026',noDate:false,status:'done',section:'PSA & services ordered',countInRing:true},
     {label:'Due diligence ordered',date:'01/28/2026',noDate:false,status:'done',section:'PSA & services ordered',countInRing:true},
-    {label:'Awaiting clearances',date:null,noDate:true,status:'active',section:'Awaiting clearances',countInRing:false},
     {label:'Appraisal received',date:null,noDate:false,status:'pending',section:'Results & clearances',countInRing:true},
     {label:'Due diligence cleared',date:null,noDate:false,status:'pending',section:'Results & clearances',countInRing:true},
     {label:'Clear to close',date:null,noDate:false,status:'pending',section:'Closing',countInRing:true},
@@ -172,10 +202,11 @@ async function getApplicationByToken(token){
     var ringColor=computeRingColor(vars,milestones,closeOfEscrow);
     var loName=vars[VAR_MAP.lo_name]||'';var procName=vars[VAR_MAP.processor_name]||'';
     var active=milestones.find(function(m){return m.status==='active';});
+    var statusMessage=generateStatusMessage(milestones);
     return{success:true,data:{
       borrower_first_name:vars[VAR_MAP.borrower_first_name]||'',borrower_last_name:vars[VAR_MAP.borrower_last_name]||'',
       property_address:vars[VAR_MAP.property_address]||'',close_of_escrow:closeOfEscrow?formatDate(closeOfEscrow):null,ring_color:ringColor,
-      active_label:active?active.label:null,
+      status_message:statusMessage,
       lo_name:loName,lo_email:vars[VAR_MAP.lo_email]||'',lo_phone:vars[VAR_MAP.lo_phone]||'',lo_photo:PHOTO_MAP[loName]||null,
       processor_name:procName,processor_email:vars[VAR_MAP.processor_email]||'',processor_photo:PHOTO_MAP[procName]||null,
       settlement_name:vars[VAR_MAP.settlement_name]||'',settlement_email:vars[VAR_MAP.settlement_email]||'',
@@ -274,7 +305,6 @@ const icons={
   'Escrow opened':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="4"/><path d="M11 11l6 6M14 14l2-2M16 16l1-1"/></svg>,
   'Appraisal ordered':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 10l7-7 7 7"/><path d="M5 9v7h4v-4h2v4h4V9"/><circle cx="15" cy="15" r="2.5"/><path d="M17 17l2 2"/></svg>,
   'Due diligence ordered':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="2" width="11" height="14" rx="1.5"/><path d="M7 6h4M7 9h2"/><circle cx="14" cy="14" r="3"/><path d="M16.5 16.5L18 18"/></svg>,
-  'Awaiting clearances':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7"/><path d="M10 6v4h3"/></svg>,
   'Appraisal received':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="3" width="12" height="14" rx="2"/><path d="M8 2v2h4V2"/><path d="M7 10l2 2 4-4"/></svg>,
   'Due diligence cleared':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="12" height="16" rx="1.5"/><path d="M7 10l2 2 4-4"/></svg>,
   'Clear to close':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7"/><path d="M7 10l2 2.5 4-5"/></svg>,
@@ -347,7 +377,6 @@ export default function TrackerPage(){
   if(loading)return(<div className="min-h-screen flex items-center justify-center bg-[#F5F6FA]"><div className="text-center"><div className="w-10 h-10 border-[3px] border-ss-blue/20 border-t-ss-blue rounded-full animate-spin mx-auto mb-4"/><p className="text-sm text-gray-400 font-medium">Loading loan status...</p></div></div>);
   if(error)return(<div className="min-h-screen flex items-center justify-center bg-[#F5F6FA] px-6"><div className="text-center max-w-md"><img src="/assets/logo-white.jpg" alt="Second Street" className="h-8 mx-auto mb-6 rounded"/><h1 className="text-2xl text-navy mb-2 font-bold">Link not found</h1><p className="text-sm text-gray-500 leading-relaxed mb-6">{error}</p><p className="text-xs text-gray-400">Need help? <a href="mailto:hello@mysecondstreet.com" className="text-ss-blue">hello@mysecondstreet.com</a> &bull; <a href="tel:+19493391660" className="text-ss-blue">+1 (949) 339-1660</a></p></div></div>);
   const done=data.milestones.filter(m=>m.countInRing&&m.status==='done').length;
-  const active=data.milestones.find(m=>m.status==='active');
   const total=data.milestones.filter(m=>m.countInRing).length;
   const rc=data.ring_color||'green';
   const borderCls=rc==='red'?'border-l-red-500':rc==='yellow'?'border-l-amber-400':'border-l-green-500';
@@ -369,8 +398,8 @@ export default function TrackerPage(){
             <div className="text-[11px] text-white/60 mb-3">{data.property_address}</div>
             <div className="inline-flex gap-2 flex-wrap">
               <div className="bg-white/[0.08] rounded-lg px-3 py-1.5">
-                <div className="text-[9px] text-white/45 uppercase tracking-wider font-semibold">Current step</div>
-                <div className="text-[12px] text-white font-bold mt-0.5">{active?active.label:'Complete!'}</div>
+                <div className="text-[9px] text-white/45 uppercase tracking-wider font-semibold">Status</div>
+                <div className="text-[12px] text-white font-bold mt-0.5">{data.status_message||'In progress'}</div>
               </div>
               {data.close_of_escrow&&<div className="bg-white/[0.08] rounded-lg px-3 py-1.5">
                 <div className="text-[9px] text-white/45 uppercase tracking-wider font-semibold">Close of escrow</div>
