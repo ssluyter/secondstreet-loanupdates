@@ -112,51 +112,23 @@ function buildMilestones(vars,appStatus,appCreatedAt){
 
 function generateStatusMessage(milestones){
   var pending=milestones.filter(function(m){return m.status!=='done';});
-  if(pending.length===0)return 'Complete!';
+  if(pending.length===0)return{text:'Complete!',items:[]};
   var sections={'Application':[],'PSA & services ordered':[],'Results & clearances':[],'Closing':[]};
   pending.forEach(function(m){if(sections[m.section])sections[m.section].push(m.label);});
-  if(sections['Application'].length>0){
-    var items=sections['Application'];
-    if(items.length===1)return 'Waiting for '+items[0].toLowerCase();
-    return 'Waiting for '+items.map(function(x){return x.toLowerCase();}).join(' & ');
-  }
-  if(sections['PSA & services ordered'].length>0){
-    var items=sections['PSA & services ordered'];
-    var names=items.map(function(x){
-      if(x==='Purchase agreement')return 'purchase agreement';
-      if(x==='Escrow opened')return 'escrow opening';
-      if(x==='Appraisal ordered')return 'appraisal order';
-      if(x==='Due diligence ordered')return 'due diligence order';
-      return x.toLowerCase();
-    });
-    if(names.length===1)return 'Waiting for '+names[0];
-    if(names.length===2)return 'Waiting for '+names[0]+' & '+names[1];
-    return 'Waiting for '+names.slice(0,-1).join(', ')+' & '+names[names.length-1];
-  }
-  if(sections['Results & clearances'].length>0){
-    var items=sections['Results & clearances'];
-    var names=items.map(function(x){
-      if(x==='Appraisal received')return 'appraisal results';
-      if(x==='Due diligence cleared')return 'due diligence clearance';
-      return x.toLowerCase();
-    });
-    if(names.length===1)return 'Waiting for '+names[0];
-    return 'Waiting for '+names[0]+' & '+names[1];
-  }
-  if(sections['Closing'].length>0){
-    var first=sections['Closing'][0];
-    if(first==='Clear to close')return 'Waiting for clear to close';
-    if(first==='Closing documents issued')return 'Waiting for closing documents';
-    if(first==='Closing complete')return 'Waiting for funding';
-    return 'Waiting for '+first.toLowerCase();
-  }
-  return 'In progress';
+  var nameMap={'Purchase agreement':'Purchase agreement','Escrow opened':'Escrow opening','Appraisal ordered':'Appraisal order','Due diligence ordered':'Due diligence order','Appraisal received':'Appraisal results','Due diligence cleared':'Due diligence clearance','Clear to close':'Clear to close','Closing documents issued':'Closing documents','Closing complete':'Funding'};
+  var activeSection=null;var items=[];
+  if(sections['Application'].length>0){activeSection='Application';items=sections['Application'];}
+  else if(sections['PSA & services ordered'].length>0){activeSection='PSA & services ordered';items=sections['PSA & services ordered'];}
+  else if(sections['Results & clearances'].length>0){activeSection='Results & clearances';items=sections['Results & clearances'];}
+  else if(sections['Closing'].length>0){activeSection='Closing';items=sections['Closing'];}
+  var mapped=items.map(function(x){return nameMap[x]||x;});
+  return{text:'Waiting for:',items:mapped};
 }
 
 const MOCK_DATA={
   borrower_first_name:'John',borrower_last_name:'Garcia',
   property_address:'123 Playa Hermosa, Guanacaste, Costa Rica',
-  close_of_escrow:'04/15/2026',ring_color:'green',status_message:'Waiting for appraisal results & due diligence clearance',
+  close_of_escrow:'04/15/2026',ring_color:'green',status_message:{text:'Waiting for:',items:['Appraisal results','Due diligence clearance']},
   lo_name:'Raj Ponniah',lo_email:'raj@mysecondstreet.com',lo_phone:'+1 (949) 339-1660',lo_photo:'/assets/raj.jpg',
   processor_name:'Sanam Parwani',processor_email:'sanam@mysecondstreet.com',processor_photo:'/assets/sanam.jpg',
   settlement_name:'Jane Martinez',settlement_email:'jane@lawfirm.com',
@@ -387,8 +359,6 @@ export default function TrackerPage(){
   data.milestones.forEach(function(m){if(m.section!==cs){cs=m.section;sections.push({title:cs,milestones:[]});}sections[sections.length-1].milestones.push(m);});
   return(<div className="min-h-screen bg-[#F5F6FA]">
     <div className="bg-gradient-to-br from-navy via-[#1a2468] to-ss-blue relative overflow-hidden">
-      <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/[0.04]"/>
-      <div className="absolute -bottom-6 right-20 w-24 h-24 rounded-full bg-white/[0.03]"/>
       <div className="max-w-3xl mx-auto px-6 pt-8 pb-10 relative z-10">
         <div className="flex flex-col items-center sm:flex-row sm:items-end gap-2 sm:gap-6 mb-6">
           <img src="/assets/logo-white.jpg" alt="Second Street" className="h-7 rounded"/>
@@ -398,14 +368,14 @@ export default function TrackerPage(){
           <ProgressRing completed={done} total={total} color={rc}/>
           <div className="text-center sm:text-left flex-1">
             <div className="text-[22px] sm:text-[18px] text-white mb-1 font-bold">{data.borrower_first_name} {data.borrower_last_name}</div>
-            <div className="text-[13px] sm:text-[12px] text-white/75 mb-3">{data.property_address}</div>
+            <div className="text-[15px] sm:text-[14px] text-white/75 mb-3">🏠 {data.property_address}</div>
             <div className="inline-flex gap-2 flex-wrap justify-center sm:justify-start">
               <div className="bg-white/[0.08] rounded-lg px-3 py-1.5">
                 <div className="text-[10px] text-white/65 uppercase tracking-wider font-semibold">Status</div>
-                <div className="text-[13px] text-white font-bold mt-0.5">{data.status_message||'In progress'}</div>
+                {data.status_message&&data.status_message.items&&data.status_message.items.length>0?(<div className="mt-1"><div className="text-[12px] text-white font-semibold">{data.status_message.text}</div><ul className="mt-0.5 space-y-0.5">{data.status_message.items.map((item,i)=><li key={i} className="text-[12px] text-white/90 flex items-start gap-1.5"><span className="text-white/40 mt-px">•</span>{item}</li>)}</ul></div>):(<div className="text-[13px] text-white font-bold mt-0.5">{(data.status_message&&data.status_message.text)||'In progress'}</div>)}
               </div>
               {data.close_of_escrow&&<div className="bg-white/[0.08] rounded-lg px-3 py-2">
-                <div className="text-[10px] text-white/65 uppercase tracking-wider font-semibold">Close of escrow</div>
+                <div className="text-[10px] text-white/65 uppercase tracking-wider font-semibold">🎯 Close of escrow</div>
                 <div className="text-[15px] text-green-400 font-bold mt-0.5">{data.close_of_escrow}</div>
               </div>}
             </div>
@@ -413,7 +383,7 @@ export default function TrackerPage(){
         </div>
       </div>
     </div>
-    <div className="max-w-3xl mx-auto px-6 -mt-2 relative z-20 pb-10 pt-4">
+    <div className="max-w-3xl mx-auto px-6 -mt-2 relative z-20 pb-10 pt-8">
       {sections.map(s=><MilestoneSection key={s.title} title={s.title} milestones={s.milestones}/>)}
       <div className="flex flex-col gap-2.5 mt-4">
         <div className="bg-white rounded-xl border border-ss-border p-4">
