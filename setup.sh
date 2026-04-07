@@ -34,7 +34,7 @@ const VAR_MAP={
   agent_name:'intermediary_primary_contact_name',agent_email:'intermediary_primary_contact_email',agent_phone:'intermediary_phone_number',
   tracking_token:TOKEN_VAR,
 };
-var STATUS_ORDER=['Application Started','Incomes and Employment','Financial Assets','Prequal Request','Residency','Application Submission','Pre-Approved!','Conditions Review','In Processing','In Underwriting','Additional Tasks Required','Clear to Close','Closing','Closing Docs Prepared','Closing Docs Received','Funded'];
+var STATUS_ORDER=['Application Started','Incomes and Employment','Financial Assets','Prequal Request','Residency','Application Submission','Pre-Approved!','Conditions Review','In Processing','In Underwriting','Additional Tasks Required','Clear to Close','Closing','Closing Docs Issued','Closing Docs Received','Funded'];
 function statusAtOrPast(cs,ts){var ci=STATUS_ORDER.indexOf(cs);var ti=STATUS_ORDER.indexOf(ts);if(ci===-1||ti===-1)return false;return ci>=ti;}
 var PHOTO_MAP={'Raj Ponniah':'/assets/raj.jpg','Alex Borges':'/assets/alex.jpg','Sanam Parwani':'/assets/sanam.jpg'};
 function hasDate(v){return v&&typeof v==='string'&&v.trim()!=='';}
@@ -86,7 +86,7 @@ function buildMilestones(vars,appStatus,appCreatedAt){
     {label:'Due diligence cleared',dateKey:'dd_cleared',noDate:false,section:'Results & clearances',statusTrigger:null,countInRing:true,useCreatedAt:false},
     {label:'Client conditions cleared',dateKey:'clear_to_close',noDate:false,section:'Results & clearances',statusTrigger:'Clear to Close',countInRing:true,useCreatedAt:false},
     {label:'Clear to close',dateKey:'clear_to_close',noDate:false,section:'Closing',statusTrigger:'Clear to Close',countInRing:true,useCreatedAt:false},
-    {label:'Closing documents issued',dateKey:'closing_docs_issued',noDate:false,section:'Closing',statusTrigger:'Closing Docs Prepared',countInRing:true,useCreatedAt:false},
+    {label:'Closing docs prepared',dateKey:'closing_docs_issued',noDate:false,section:'Closing',statusTrigger:'Closing Docs Issued',countInRing:true,useCreatedAt:false},
     {label:'Closing complete',dateKey:'loan_funded',noDate:false,section:'Closing',statusTrigger:'Funded',countInRing:true,useCreatedAt:false},
   ];
   var anyDateStepHasDate=raw.slice(2).some(function(m){if(m.noDate||!m.dateKey)return false;return hasDate(vars[VAR_MAP[m.dateKey]]);});
@@ -114,7 +114,7 @@ function buildMilestones(vars,appStatus,appCreatedAt){
 function generateStatusMessage(milestones){
   var pending=milestones.filter(function(m){return m.status!=='done'&&m.countInRing;});
   if(pending.length===0)return{text:'Complete!',items:[]};
-  var nameMap={'Purchase agreement':'Purchase agreement','Escrow opened':'Escrow opening','Appraisal ordered':'Appraisal order','Due diligence ordered':'Due diligence order','Appraisal received':'Appraisal results','Due diligence cleared':'Due diligence clearance','Client conditions cleared':'Client conditions clearance','Clear to close':'Clear to close','Closing documents issued':'Closing documents','Closing complete':'Funding'};
+  var nameMap={'Purchase agreement':'Purchase agreement','Escrow opened':'Escrow opening','Appraisal ordered':'Appraisal order','Due diligence ordered':'Due diligence order','Appraisal received':'Appraisal results','Due diligence cleared':'Due diligence clearance','Client conditions cleared':'Client conditions clearance','Clear to close':'Clear to close','Closing docs prepared':'Closing docs','Closing complete':'Funding'};
   var mapped=pending.map(function(m){return nameMap[m.label]||m.label;});
   return{text:'Waiting for:',items:mapped};
 }
@@ -254,7 +254,7 @@ const icons={
   'Due diligence cleared':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="12" height="16" rx="1.5"/><path d="M7 10l2 2 4-4"/></svg>,
   'Client conditions cleared':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h12v11a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"/><path d="M2 6h16"/><path d="M7 3h6"/><path d="M7 11l2 2 4-4"/></svg>,
   'Clear to close':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7"/><path d="M7 10l2 2.5 4-5"/></svg>,
-  'Closing documents issued':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="2" width="14" height="16" rx="1.5"/><path d="M7 6h6M7 9h4M7 12h5"/></svg>,
+  'Closing docs prepared':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="2" width="14" height="16" rx="1.5"/><path d="M7 6h6M7 9h4M7 12h5"/></svg>,
   'Closing complete':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3l2 4 5 1-4 3 1 5-4-2-4 2 1-5-4-3 5-1z"/></svg>,
 };
 export default function MilestoneIcon({label}){return icons[label]||icons['Application received'];}
