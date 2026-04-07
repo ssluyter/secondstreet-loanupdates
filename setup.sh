@@ -112,17 +112,10 @@ function buildMilestones(vars,appStatus,appCreatedAt){
 }
 
 function generateStatusMessage(milestones){
-  var pending=milestones.filter(function(m){return m.status!=='done';});
+  var pending=milestones.filter(function(m){return m.status!=='done'&&m.countInRing;});
   if(pending.length===0)return{text:'Complete!',items:[]};
-  var sections={'Application':[],'PSA & services ordered':[],'Results & clearances':[],'Closing':[]};
-  pending.forEach(function(m){if(sections[m.section])sections[m.section].push(m.label);});
   var nameMap={'Purchase agreement':'Purchase agreement','Escrow opened':'Escrow opening','Appraisal ordered':'Appraisal order','Due diligence ordered':'Due diligence order','Appraisal received':'Appraisal results','Due diligence cleared':'Due diligence clearance','Client conditions cleared':'Client conditions clearance','Clear to close':'Clear to close','Closing documents issued':'Closing documents','Closing complete':'Funding'};
-  var activeSection=null;var items=[];
-  if(sections['Application'].length>0){activeSection='Application';items=sections['Application'];}
-  else if(sections['PSA & services ordered'].length>0){activeSection='PSA & services ordered';items=sections['PSA & services ordered'];}
-  else if(sections['Results & clearances'].length>0){activeSection='Results & clearances';items=sections['Results & clearances'];}
-  else if(sections['Closing'].length>0){activeSection='Closing';items=sections['Closing'];}
-  var mapped=items.map(function(x){return nameMap[x]||x;});
+  var mapped=pending.map(function(m){return nameMap[m.label]||m.label;});
   return{text:'Waiting for:',items:mapped};
 }
 
@@ -267,7 +260,7 @@ export default function ProgressRing({completed,total,color}){
   useEffect(()=>{const t=setTimeout(()=>setOffset(c-(c*pct/100)),300);return()=>clearTimeout(t)},[pct]);
   return(<div className="relative w-[100px] h-[100px] sm:w-[90px] sm:h-[90px] flex-shrink-0">
     <svg viewBox="0 0 100 100" className="-rotate-90"><circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="5"/><circle cx="50" cy="50" r="42" fill="none" stroke={strokeColor} strokeWidth="5" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset} style={{transition:'stroke-dashoffset 1.2s ease'}}/></svg>
-    <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-[22px] sm:text-[18px] font-bold text-white leading-none">{pct}%</span><span className="text-[8px] sm:text-[7px] text-white/50 uppercase tracking-wider mt-0.5">To Funding</span></div>
+    <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-[22px] sm:text-[18px] font-bold text-white leading-none">{pct}%</span><span className="text-[8px] sm:text-[7px] text-white/50 uppercase tracking-wider mt-0.5">Complete</span></div>
   </div>);
 }
 ENDFILE
