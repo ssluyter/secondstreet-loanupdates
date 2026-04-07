@@ -265,7 +265,7 @@ export default function ProgressRing({completed,total,color}){
   useEffect(()=>{const t=setTimeout(()=>setOffset(c-(c*pct/100)),300);return()=>clearTimeout(t)},[pct]);
   return(<div className="relative w-[100px] h-[100px] sm:w-[90px] sm:h-[90px] flex-shrink-0">
     <svg viewBox="0 0 100 100" className="-rotate-90"><circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="5"/><circle cx="50" cy="50" r="42" fill="none" stroke={strokeColor} strokeWidth="5" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset} style={{transition:'stroke-dashoffset 1.2s ease'}}/></svg>
-    <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-[22px] sm:text-[18px] font-bold text-white leading-none">{pct}%</span><span className="text-[8px] sm:text-[7px] text-white/50 uppercase tracking-wider mt-0.5">Complete</span></div>
+    <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-[22px] sm:text-[18px] font-bold text-white leading-none">{pct}%</span><span className="text-[8px] sm:text-[7px] text-white/50 uppercase tracking-wider mt-0.5">Funding</span></div>
   </div>);
 }
 ENDFILE
@@ -370,7 +370,7 @@ export default function TrackerPage(){
             <div className="text-[22px] sm:text-[18px] text-white mb-1 font-bold">{data.borrower_first_name} {data.borrower_last_name}</div>
             <div className="text-[15px] sm:text-[14px] text-white/75 mb-3">🏠 {data.property_address}</div>
             <div className="inline-flex gap-2 flex-wrap justify-center sm:justify-start">
-              <div className="bg-white/[0.08] rounded-lg px-3 py-1.5">
+              <div className="bg-white/[0.08] rounded-lg px-3 py-2">
                 <div className="text-[10px] text-white/65 uppercase tracking-wider font-semibold">Status</div>
                 {data.status_message&&data.status_message.items&&data.status_message.items.length>0?(<div className="mt-1"><div className="text-[12px] text-white font-semibold">{data.status_message.text}</div><ul className="mt-0.5 space-y-0.5">{data.status_message.items.map((item,i)=><li key={i} className="text-[12px] text-white/90 flex items-start gap-1.5"><span className="text-white/40 mt-px">•</span>{item}</li>)}</ul></div>):(<div className="text-[13px] text-white font-bold mt-0.5">{(data.status_message&&data.status_message.text)||'In progress'}</div>)}
               </div>
