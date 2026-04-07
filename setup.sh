@@ -49,9 +49,9 @@ function computeRingColor(vars,milestones,closeOfEscrow){
   var closeDate;try{closeDate=new Date(closeDateStr);closeDate.setHours(0,0,0,0);}catch(e){return 'green';}
   if(isNaN(closeDate.getTime()))return 'green';
   var daysUntilClose=Math.ceil((closeDate-today)/86400000);
-  var criticalLabels=['Purchase agreement','Escrow opened','Appraisal ordered','Due diligence ordered','Appraisal received','Due diligence cleared'];
+  var criticalLabels=['Purchase agreement','Escrow opened','Appraisal ordered','Due diligence ordered','Appraisal received','Due diligence cleared','Client conditions cleared'];
   var criticalDone=milestones.filter(function(m){return criticalLabels.indexOf(m.label)!==-1&&m.status==='done';}).length;
-  var criticalRemaining=6-criticalDone;
+  var criticalRemaining=7-criticalDone;
   if(criticalRemaining===0&&daysUntilClose<0)return 'green';
   if(daysUntilClose<0)return 'red';
   var ddReceived=hasDate(ddReceivedDateStr);
@@ -66,10 +66,10 @@ function computeRingColor(vars,milestones,closeOfEscrow){
   }
   if(criticalRemaining===0)return 'green';
   if(daysUntilClose<3){return criticalRemaining>0?'red':'green';}
-  if(daysUntilClose>=3&&daysUntilClose<10){if(criticalRemaining>=2)return 'red';if(criticalRemaining===1)return 'yellow';return 'green';}
-  if(daysUntilClose>=10&&daysUntilClose<20){if(criticalRemaining>=4)return 'red';if(criticalRemaining===3)return 'yellow';return 'green';}
-  if(daysUntilClose>=20&&daysUntilClose<28){if(criticalRemaining>=5)return 'red';if(criticalRemaining===4)return 'yellow';return 'green';}
-  if(daysUntilClose>=28&&daysUntilClose<=42){if(criticalRemaining>=5)return 'yellow';return 'green';}
+  if(daysUntilClose>=3&&daysUntilClose<10){if(criticalRemaining>=3)return 'red';if(criticalRemaining>=1)return 'yellow';return 'green';}
+  if(daysUntilClose>=10&&daysUntilClose<20){if(criticalRemaining>=5)return 'red';if(criticalRemaining>=3)return 'yellow';return 'green';}
+  if(daysUntilClose>=20&&daysUntilClose<28){if(criticalRemaining>=6)return 'red';if(criticalRemaining>=4)return 'yellow';return 'green';}
+  if(daysUntilClose>=28&&daysUntilClose<=42){if(criticalRemaining>=6)return 'yellow';return 'green';}
   return 'green';
 }
 
@@ -84,6 +84,7 @@ function buildMilestones(vars,appStatus,appCreatedAt){
     {label:'Due diligence ordered',dateKey:'dd_ordered',noDate:false,section:'PSA & services ordered',statusTrigger:null,countInRing:true,useCreatedAt:false},
     {label:'Appraisal received',dateKey:'appraisal_received',noDate:false,section:'Results & clearances',statusTrigger:null,countInRing:true,useCreatedAt:false},
     {label:'Due diligence cleared',dateKey:'dd_cleared',noDate:false,section:'Results & clearances',statusTrigger:null,countInRing:true,useCreatedAt:false},
+    {label:'Client conditions cleared',dateKey:'clear_to_close',noDate:false,section:'Results & clearances',statusTrigger:'Clear to Close',countInRing:true,useCreatedAt:false},
     {label:'Clear to close',dateKey:'clear_to_close',noDate:false,section:'Closing',statusTrigger:'Clear to Close',countInRing:true,useCreatedAt:false},
     {label:'Closing documents issued',dateKey:'closing_docs_issued',noDate:false,section:'Closing',statusTrigger:'Closing Docs Issued',countInRing:true,useCreatedAt:false},
     {label:'Closing complete',dateKey:'loan_funded',noDate:false,section:'Closing',statusTrigger:'Funded',countInRing:true,useCreatedAt:false},
@@ -115,7 +116,7 @@ function generateStatusMessage(milestones){
   if(pending.length===0)return{text:'Complete!',items:[]};
   var sections={'Application':[],'PSA & services ordered':[],'Results & clearances':[],'Closing':[]};
   pending.forEach(function(m){if(sections[m.section])sections[m.section].push(m.label);});
-  var nameMap={'Purchase agreement':'Purchase agreement','Escrow opened':'Escrow opening','Appraisal ordered':'Appraisal order','Due diligence ordered':'Due diligence order','Appraisal received':'Appraisal results','Due diligence cleared':'Due diligence clearance','Clear to close':'Clear to close','Closing documents issued':'Closing documents','Closing complete':'Funding'};
+  var nameMap={'Purchase agreement':'Purchase agreement','Escrow opened':'Escrow opening','Appraisal ordered':'Appraisal order','Due diligence ordered':'Due diligence order','Appraisal received':'Appraisal results','Due diligence cleared':'Due diligence clearance','Client conditions cleared':'Client conditions clearance','Clear to close':'Clear to close','Closing documents issued':'Closing documents','Closing complete':'Funding'};
   var activeSection=null;var items=[];
   if(sections['Application'].length>0){activeSection='Application';items=sections['Application'];}
   else if(sections['PSA & services ordered'].length>0){activeSection='PSA & services ordered';items=sections['PSA & services ordered'];}
@@ -143,6 +144,7 @@ const MOCK_DATA={
     {label:'Due diligence ordered',date:'01/28/2026',noDate:false,status:'done',section:'PSA & services ordered',countInRing:true},
     {label:'Appraisal received',date:null,noDate:false,status:'pending',section:'Results & clearances',countInRing:true},
     {label:'Due diligence cleared',date:null,noDate:false,status:'pending',section:'Results & clearances',countInRing:true},
+    {label:'Client conditions cleared',date:null,noDate:false,status:'pending',section:'Results & clearances',countInRing:true},
     {label:'Clear to close',date:null,noDate:false,status:'pending',section:'Closing',countInRing:true},
     {label:'Closing documents issued',date:null,noDate:false,status:'pending',section:'Closing',countInRing:true},
     {label:'Closing complete',date:null,noDate:false,status:'pending',section:'Closing',countInRing:true},
@@ -265,7 +267,7 @@ export default function ProgressRing({completed,total,color}){
   useEffect(()=>{const t=setTimeout(()=>setOffset(c-(c*pct/100)),300);return()=>clearTimeout(t)},[pct]);
   return(<div className="relative w-[100px] h-[100px] sm:w-[90px] sm:h-[90px] flex-shrink-0">
     <svg viewBox="0 0 100 100" className="-rotate-90"><circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="5"/><circle cx="50" cy="50" r="42" fill="none" stroke={strokeColor} strokeWidth="5" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset} style={{transition:'stroke-dashoffset 1.2s ease'}}/></svg>
-    <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-[22px] sm:text-[18px] font-bold text-white leading-none">{pct}%</span><span className="text-[8px] sm:text-[7px] text-white/50 uppercase tracking-wider mt-0.5">To Funding</span></div>
+    <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-[22px] sm:text-[18px] font-bold text-white leading-none">{pct}%</span><span className="text-[8px] sm:text-[7px] text-white/50 uppercase tracking-wider mt-0.5">Complete</span></div>
   </div>);
 }
 ENDFILE
@@ -282,6 +284,7 @@ const icons={
   'Due diligence ordered':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="2" width="11" height="14" rx="1.5"/><path d="M7 6h4M7 9h2"/><circle cx="14" cy="14" r="3"/><path d="M16.5 16.5L18 18"/></svg>,
   'Appraisal received':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="3" width="12" height="14" rx="2"/><path d="M8 2v2h4V2"/><path d="M7 10l2 2 4-4"/></svg>,
   'Due diligence cleared':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="12" height="16" rx="1.5"/><path d="M7 10l2 2 4-4"/></svg>,
+  'Client conditions cleared':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h12v11a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"/><path d="M2 6h16"/><path d="M7 3h6"/><path d="M7 11l2 2 4-4"/></svg>,
   'Clear to close':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7"/><path d="M7 10l2 2.5 4-5"/></svg>,
   'Closing documents issued':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="2" width="14" height="16" rx="1.5"/><path d="M7 6h6M7 9h4M7 12h5"/></svg>,
   'Closing complete':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3l2 4 5 1-4 3 1 5-4-2-4 2 1-5-4-3 5-1z"/></svg>,
@@ -370,7 +373,7 @@ export default function TrackerPage(){
             <div className="text-[22px] sm:text-[18px] text-white mb-1 font-bold">{data.borrower_first_name} {data.borrower_last_name}</div>
             <div className="text-[15px] sm:text-[14px] text-white/75 mb-3">🏠 {data.property_address}</div>
             <div className="inline-flex gap-2 flex-wrap justify-center sm:justify-start">
-              <div className="bg-white/[0.08] rounded-lg px-3 py-2">
+              <div className="bg-white/[0.08] rounded-lg px-3 py-1.5">
                 <div className="text-[10px] text-white/65 uppercase tracking-wider font-semibold">Status</div>
                 {data.status_message&&data.status_message.items&&data.status_message.items.length>0?(<div className="mt-1"><div className="text-[12px] text-white font-semibold">{data.status_message.text}</div><ul className="mt-0.5 space-y-0.5">{data.status_message.items.map((item,i)=><li key={i} className="text-[12px] text-white/90 flex items-start gap-1.5"><span className="text-white/40 mt-px">•</span>{item}</li>)}</ul></div>):(<div className="text-[13px] text-white font-bold mt-0.5">{(data.status_message&&data.status_message.text)||'In progress'}</div>)}
               </div>
