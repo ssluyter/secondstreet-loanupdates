@@ -49,7 +49,7 @@ function computeRingColor(vars,milestones,closeOfEscrow){
   var closeDate;try{closeDate=new Date(closeDateStr);closeDate.setHours(0,0,0,0);}catch(e){return 'green';}
   if(isNaN(closeDate.getTime()))return 'green';
   var daysUntilClose=Math.ceil((closeDate-today)/86400000);
-  var criticalLabels=['Purchase agreement','Escrow opened','Appraisal ordered','Due diligence ordered','Appraisal received','Due diligence cleared','Client conditions cleared'];
+  var criticalLabels=['Purchase agreement received','Escrow opened','Appraisal ordered','Due diligence ordered','Appraisal received','Due diligence cleared','Client conditions cleared'];
   var criticalDone=milestones.filter(function(m){return criticalLabels.indexOf(m.label)!==-1&&m.status==='done';}).length;
   var criticalRemaining=7-criticalDone;
   if(criticalRemaining===0&&daysUntilClose<0)return 'green';
@@ -78,7 +78,7 @@ function buildMilestones(vars,appStatus,appCreatedAt){
     {label:'Application received',dateKey:null,noDate:false,section:'Application',statusTrigger:null,countInRing:true,useCreatedAt:true},
     {label:'Submitted to underwriting',dateKey:'submitted_to_uw',noDate:false,section:'Application',statusTrigger:null,countInRing:true,useCreatedAt:false},
     {label:'Pre-approval issued',dateKey:'pal_delivery_date',noDate:false,section:'Application',statusTrigger:null,countInRing:true,useCreatedAt:false},
-    {label:'Purchase agreement',dateKey:'psa_received',noDate:false,section:'PSA & services ordered',statusTrigger:null,countInRing:true,useCreatedAt:false},
+    {label:'Purchase agreement received',dateKey:'psa_received',noDate:false,section:'PSA & services ordered',statusTrigger:null,countInRing:true,useCreatedAt:false},
     {label:'Escrow opened',dateKey:'escrow_opened',noDate:false,section:'PSA & services ordered',statusTrigger:null,countInRing:true,useCreatedAt:false},
     {label:'Appraisal ordered',dateKey:'appraisal_ordered',noDate:false,section:'PSA & services ordered',statusTrigger:null,countInRing:true,useCreatedAt:false},
     {label:'Due diligence ordered',dateKey:'dd_ordered',noDate:false,section:'PSA & services ordered',statusTrigger:null,countInRing:true,useCreatedAt:false},
@@ -114,7 +114,7 @@ function buildMilestones(vars,appStatus,appCreatedAt){
 function generateStatusMessage(milestones){
   var pending=milestones.filter(function(m){return m.status!=='done'&&m.countInRing;});
   if(pending.length===0)return{text:'Complete!',items:[]};
-  var nameMap={'Purchase agreement':'Purchase agreement','Escrow opened':'Escrow opening','Appraisal ordered':'Appraisal order','Due diligence ordered':'Due diligence order','Appraisal received':'Appraisal results','Due diligence cleared':'Due diligence clearance','Client conditions cleared':'Client conditions clearance','Clear to close':'Clear to close','Closing documents issued':'Closing documents','Closing complete':'Funding'};
+  var nameMap={'Purchase agreement received':'Purchase agreement received','Escrow opened':'Escrow opening','Appraisal ordered':'Appraisal order','Due diligence ordered':'Due diligence order','Appraisal received':'Appraisal results','Due diligence cleared':'Due diligence clearance','Client conditions cleared':'Client conditions clearance','Clear to close':'Clear to close','Closing documents issued':'Closing documents','Closing complete':'Funding'};
   var mapped=pending.map(function(m){return nameMap[m.label]||m.label;});
   return{text:'Waiting for:',items:mapped};
 }
@@ -131,7 +131,7 @@ const MOCK_DATA={
     {label:'Application received',date:'01/05/2026',noDate:false,status:'done',section:'Application',countInRing:true},
     {label:'Submitted to underwriting',date:'01/08/2026',noDate:false,status:'done',section:'Application',countInRing:true},
     {label:'Pre-approval issued',date:'01/15/2026',noDate:false,status:'done',section:'Application',countInRing:true},
-    {label:'Purchase agreement',date:'01/20/2026',noDate:false,status:'done',section:'PSA & services ordered',countInRing:true},
+    {label:'Purchase agreement received',date:'01/20/2026',noDate:false,status:'done',section:'PSA & services ordered',countInRing:true},
     {label:'Escrow opened',date:'01/22/2026',noDate:false,status:'done',section:'PSA & services ordered',countInRing:true},
     {label:'Appraisal ordered',date:'01/25/2026',noDate:false,status:'done',section:'PSA & services ordered',countInRing:true},
     {label:'Due diligence ordered',date:'01/28/2026',noDate:false,status:'done',section:'PSA & services ordered',countInRing:true},
@@ -271,7 +271,7 @@ const icons={
   'Application received':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 14l3-3h8l3 3"/><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 3v4h6V3"/></svg>,
   'Submitted to underwriting':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 14V4M6 8l4-4 4 4"/><path d="M4 14h12"/></svg>,
   'Pre-approval issued':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 2L3 6v4c0 4.4 3 8.5 7 10 4-1.5 7-5.6 7-10V6l-7-4z"/><path d="M7 10l2 2 4-4"/></svg>,
-  'Purchase agreement':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="3" width="12" height="14" rx="2"/><path d="M8 2v2h4V2"/><path d="M7 10l2 2 4-4"/></svg>,
+  'Purchase agreement received':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="3" width="12" height="14" rx="2"/><path d="M8 2v2h4V2"/><path d="M7 10l2 2 4-4"/></svg>,
   'Escrow opened':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="4"/><path d="M11 11l6 6M14 14l2-2M16 16l1-1"/></svg>,
   'Appraisal ordered':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 10l7-7 7 7"/><path d="M5 9v7h4v-4h2v4h4V9"/><circle cx="15" cy="15" r="2.5"/><path d="M17 17l2 2"/></svg>,
   'Due diligence ordered':<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="2" width="11" height="14" rx="1.5"/><path d="M7 6h4M7 9h2"/><circle cx="14" cy="14" r="3"/><path d="M16.5 16.5L18 18"/></svg>,
