@@ -34,7 +34,7 @@ const VAR_MAP={
   agent_name:'intermediary_primary_contact_name',agent_email:'intermediary_primary_contact_email',
   tracking_token:TOKEN_VAR,
 };
-var STATUS_ORDER=['Application Started','Incomes and Employment','Financial Assets','Prequal Request','Residency','Application Submission','Pre-Approved!','Conditions Review','In Processing','In Underwriting','Additional Tasks Required','Clear to Close','Closing','Closing Docs Issued','Closing Docs Received','Funded'];
+var STATUS_ORDER=['Application Started','Incomes and Employment','Financial Assets','Prequal Request','Residency','Application Submission','Pre-Approved!','Conditions Review','In Processing','In Underwriting','Additional Tasks Required','Clear to Close','Closing','Closing Docs Prepared','Closing Docs Received','Funded'];
 function statusAtOrPast(cs,ts){var ci=STATUS_ORDER.indexOf(cs);var ti=STATUS_ORDER.indexOf(ts);if(ci===-1||ti===-1)return false;return ci>=ti;}
 var PHOTO_MAP={'Raj Ponniah':'/assets/raj.jpg','Alex Borges':'/assets/alex.jpg','Sanam Parwani':'/assets/sanam.jpg'};
 function hasDate(v){return v&&typeof v==='string'&&v.trim()!=='';}
@@ -86,7 +86,7 @@ function buildMilestones(vars,appStatus,appCreatedAt){
     {label:'Due diligence cleared',dateKey:'dd_cleared',noDate:false,section:'Results & clearances',statusTrigger:null,countInRing:true,useCreatedAt:false},
     {label:'Client conditions cleared',dateKey:'clear_to_close',noDate:false,section:'Results & clearances',statusTrigger:'Clear to Close',countInRing:true,useCreatedAt:false},
     {label:'Clear to close',dateKey:'clear_to_close',noDate:false,section:'Closing',statusTrigger:'Clear to Close',countInRing:true,useCreatedAt:false},
-    {label:'Closing documents issued',dateKey:'closing_docs_issued',noDate:false,section:'Closing',statusTrigger:'Closing Docs Issued',countInRing:true,useCreatedAt:false},
+    {label:'Closing documents issued',dateKey:'closing_docs_issued',noDate:false,section:'Closing',statusTrigger:'Closing Docs Prepared',countInRing:true,useCreatedAt:false},
     {label:'Closing complete',dateKey:'loan_funded',noDate:false,section:'Closing',statusTrigger:'Funded',countInRing:true,useCreatedAt:false},
   ];
   var anyDateStepHasDate=raw.slice(2).some(function(m){if(m.noDate||!m.dateKey)return false;return hasDate(vars[VAR_MAP[m.dateKey]]);});
