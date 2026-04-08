@@ -359,7 +359,7 @@ export default function TrackerPage(){
       {sections.map(s=><MilestoneSection key={s.title} title={s.title} milestones={s.milestones}/>)}
       <div className="flex flex-col gap-2.5 mt-4">
         <div className="bg-white rounded-xl border border-ss-border p-4">
-          <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Key Contacts</div>
+          <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Key Lending Contacts</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <ContactCard role="Loan officer" name={data.lo_name} email={data.lo_email} phone={data.lo_phone} photo={data.lo_photo}/>
             <ContactCard role="Operations" name={data.processor_name} email={data.processor_email} phone={data.processor_phone} photo={data.processor_photo}/>
