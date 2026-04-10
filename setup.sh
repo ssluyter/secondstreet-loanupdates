@@ -237,7 +237,7 @@ export default function ProgressRing({completed,total,color}){
   useEffect(()=>{const t=setTimeout(()=>setOffset(c-(c*pct/100)),300);return()=>clearTimeout(t)},[pct]);
   return(<div className="relative w-[100px] h-[100px] sm:w-[90px] sm:h-[90px] flex-shrink-0">
     <svg viewBox="0 0 100 100" className="-rotate-90"><circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="5"/><circle cx="50" cy="50" r="42" fill="none" stroke={strokeColor} strokeWidth="5" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset} style={{transition:'stroke-dashoffset 1.2s ease'}}/></svg>
-    <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-[22px] sm:text-[18px] font-bold text-white leading-none">{pct}%</span><span className="text-[8px] sm:text-[7px] text-white/50 uppercase tracking-wider mt-0.5">Complete</span></div>
+    <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-[22px] sm:text-[18px] font-bold text-white leading-none">{pct}%</span><span className="text-[8px] sm:text-[7px] text-white/50 uppercase tracking-wider mt-0.5">To Funding</span></div>
   </div>);
 }
 ENDFILE
