@@ -32,6 +32,7 @@ const VAR_MAP={
   processor_name:'assigned_processor',processor_email:'assigned_processor_email',processor_phone:'assigned_processor_phone',
   settlement_name:'settlement_agent_contact',settlement_email:'settlement_agent_email',settlement_phone:'settlement_agent_phone',
   agent_name:'intermediary_primary_contact_name',agent_email:'intermediary_primary_contact_email',agent_phone:'intermediary_phone_number',
+  attorney_name:'borrower_attorney_contact',attorney_email:'borrower_attorney_contact_email',attorney_phone:'borrower_attorney_contact_phone',
   tracking_token:TOKEN_VAR,
 };
 var STATUS_ORDER=['Application Started','Incomes and Employment','Financial Assets','Prequal Request','Residency','Application Submission','Pre-Approved!','Conditions Review','In Processing','In Underwriting','Additional Tasks Required','Clear to Close','Closing','Closing Docs Issued','Closing Docs Received','Funded'];
@@ -156,6 +157,7 @@ async function getApplicationByToken(token){
       processor_name:procName,processor_email:vars[VAR_MAP.processor_email]||'',processor_phone:vars[VAR_MAP.processor_phone]||'',processor_photo:PHOTO_MAP[procName]||null,
       settlement_name:vars[VAR_MAP.settlement_name]||'',settlement_email:vars[VAR_MAP.settlement_email]||'',settlement_phone:vars[VAR_MAP.settlement_phone]||'',
       agent_name:vars[VAR_MAP.agent_name]||'',agent_email:vars[VAR_MAP.agent_email]||'',agent_phone:vars[VAR_MAP.agent_phone]||'',
+      attorney_name:vars[VAR_MAP.attorney_name]||'',attorney_email:vars[VAR_MAP.attorney_email]||'',attorney_phone:vars[VAR_MAP.attorney_phone]||'',
       milestones:milestones,completed_count:completedCount,total_steps:totalRing,
     }};
   }catch(err){console.error('Digifi API fetch error:',err.message);return{success:false,error:'api_error'};}
@@ -374,13 +376,17 @@ export default function TrackerPage(){
             <ContactCard role="Operations" name={data.processor_name} email={data.processor_email} phone={data.processor_phone} photo={data.processor_photo}/>
           </div>
         </div>
-        {(data.settlement_name||data.agent_name)&&<div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          {data.settlement_name&&<div className="bg-white rounded-xl border border-ss-border p-4"><div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Legal team</div><ContactCard role="Settlement agent" name={data.settlement_name} email={data.settlement_email} phone={data.settlement_phone}/></div>}
-          {data.agent_name&&<div className="bg-white rounded-xl border border-ss-border p-4"><div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Real estate team</div><ContactCard role="Buyer's agent" name={data.agent_name} email={data.agent_email} phone={data.agent_phone}/></div>}
+        {(data.settlement_name||data.attorney_name)&&<div className="bg-white rounded-xl border border-ss-border p-4">
+          <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Legal</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {data.settlement_name&&<ContactCard role="Closing attorney" name={data.settlement_name} email={data.settlement_email} phone={data.settlement_phone}/>}
+            {data.attorney_name&&<ContactCard role="Borrower attorney" name={data.attorney_name} email={data.attorney_email} phone={data.attorney_phone}/>}
+          </div>
         </div>}
+        {data.agent_name&&<div className="bg-white rounded-xl border border-ss-border p-4"><div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Real Estate</div><ContactCard role="Buyer's agent" name={data.agent_name} email={data.agent_email} phone={data.agent_phone}/></div>}
       </div>
       <div className="mt-6 text-center text-[11px] text-gray-400 leading-relaxed">
-        <p className="font-medium text-gray-500 mb-1">Second Street Inc. &bull; Second Street CR, S.R.L.</p>
+        <p className="font-medium text-gray-500 mb-1">Second Street CR, S.R.L.</p>
         <p>This page updates automatically as your loan progresses.</p>
         <p className="mt-1">Questions? <a href="mailto:hello@mysecondstreet.com" className="text-ss-blue">hello@mysecondstreet.com</a> &bull; <a href="tel:+19493391660" className="text-ss-blue">+1 (949) 339-1660</a></p>
       </div>
